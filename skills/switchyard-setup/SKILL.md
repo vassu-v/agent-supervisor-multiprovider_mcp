@@ -8,14 +8,8 @@ description: Install, configure and troubleshoot the Switchyard agent orchestrat
 Requirements: Python 3.10+. No packages to install. At least one provider CLI installed **and logged in**. Commands say `python`;
 use `py -3.10` or `python3` if that is how Python starts on this machine.
 
-**Install a missing provider CLI** (review install scripts before running them; the user must agree to installs):
-
-| Provider | Install | Log in |
-|---|---|---|
-| Claude Code | Windows `irm https://claude.ai/install.ps1 \| iex`; macOS/Linux `curl -fsSL https://claude.ai/install.sh \| bash`; or `npm install -g @anthropic-ai/claude-code` | `claude auth login` |
-| OpenCode | `npm install -g opencode-ai`; or `curl -fsSL https://opencode.ai/install \| bash` | `opencode auth login` (free models need none) |
-| Codex CLI | `npm install -g @openai/codex`; or `curl -fsSL https://chatgpt.com/codex/install.sh \| sh` | `codex login` |
-| agy (Antigravity CLI) | Installed with Antigravity from Google; no official install command was found. Check `agy --version` | Sign in on first launch |
+**Install a missing provider CLI.** The per-OS commands, login steps and the agy note are in `docs/install.md`. Review install
+scripts before running them; the user must agree to installs.
 
 The user may not want or have every provider; offer `providers disable <name>` instead of installing.
 
@@ -35,7 +29,7 @@ python agentctl.py providers        # ready | off | not installed | needs login 
 python agentctl.py models <name>    # the model ids that provider reports right now
 ```
 Each state means: **not installed** (CLI not found), **needs login** (installed, signed out), **degraded** (installed but model
-discovery failed), **off** (switched off), **ready**. To install a missing CLI, see the install table in the README; log in with
+discovery failed), **off** (switched off), **ready**. To install a missing CLI, see `docs/install.md`; log in with
 `claude auth login`, `opencode auth login`, `codex login`, or sign in to agy on first launch.
 
 Switch providers off that the user lacks or does not want, so they are never routed to and agents are told they are unavailable:
@@ -58,6 +52,7 @@ Use the cheapest model per provider for tests (OpenCode lists free models, ids e
 - **MCP:** register the stdio server `python <repo>/orch/mcp_bridge.py` in the client. Claude Code:
   `claude mcp add switchyard -- python <repo>/orch/mcp_bridge.py`. The daemon must be running.
 - **Skills:** copy `skills/switchyard-use` into the agent's skills directory.
+- Tool list: `docs/mcp.md`. From 0.3 the MCP `initialize` instructions are a workspace briefing (peers, open questions).
 
 ## 5. Tune policy (`orch/policy.json`, hot-reloaded, no restart)
 - `routing.tiers.<tier>.candidates`: ordered `provider:pattern` list. The pattern is a glob matched against the **discovered** model
@@ -68,6 +63,7 @@ Use the cheapest model per provider for tests (OpenCode lists free models, ids e
   interrupts it and waits for `resolve`.
 - `escalation.pending_timeout_s` and `timeout_action`: what happens to unanswered escalations.
 - `mirror_files`: harness notes files whose new lines are copied into `AGENTS.md`.
+Full reference: `docs/policy.md`, `docs/providers.md`, `docs/security.md`.
 The guard is detect-and-react, not a sandbox. For hard limits use the provider's own sandbox.
 
 ## 6. Add a provider
@@ -85,6 +81,8 @@ The guard is detect-and-react, not a sandbox. For hard limits use the provider's
 | `model ... is not offered by ...` | The id is not in the live list: run `models <provider>` and use one of those |
 | Agent stuck `busy` | Slow model or long command: `tail <id>`. Free models can take a minute |
 | `401 bad or missing token` | `ORCH_TOKEN` does not match `orch/token.txt` |
+| `403` from an agent (from 0.3) | Agent tokens cannot resolve escalations, switch providers or send; ask the user |
+| Need an isolated daemon for tests (from 0.3) | `SWITCHYARD_HOME=<dir>` keeps logs, db, token and config there; `SWITCHYARD_FAKE=1` adds a model-free `fake` provider |
 | agy interrupt shows `restarts` | Expected: agy has no native cancel, so interrupt is kill + resume |
 
 ## Local notes
