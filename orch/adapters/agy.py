@@ -30,6 +30,11 @@ class AgyAdapter(Adapter):
     def alive(self):
         return self.proc is not None and self.proc.poll() is None
 
+    def _child_env(self):
+        env = dict(os.environ)
+        env.update({str(k): str(v) for k, v in (self.opts.get("env") or {}).items()})
+        return env
+
     def start(self):
         cmd = [AGY, "--input-format", "stream-json", "--output-format", "stream-json",
                "--model", self.model, "--dangerously-skip-permissions", "--print="]
@@ -40,7 +45,8 @@ class AgyAdapter(Adapter):
         if self.session_id:
             cmd += ["--conversation", self.session_id]
         self.proc = subprocess.Popen(cmd, cwd=self.cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                     stderr=subprocess.STDOUT, text=True, encoding="utf-8", bufsize=1)
+                                     stderr=subprocess.STDOUT, text=True, encoding="utf-8", bufsize=1,
+                                     env=self._child_env())
         threading.Thread(target=self._reader, args=(self.proc,), daemon=True).start()
 
     def _write(self, text):

@@ -40,6 +40,11 @@ class CodexAdapter(Adapter):
         self._killed = False
 
     # ---- lifecycle ------------------------------------------------
+    def _child_env(self):
+        env = dict(os.environ)
+        env.update({str(k): str(v) for k, v in (self.opts.get("env") or {}).items()})
+        return env
+
     def start(self):
         cmd = self.opts.get("command")
         if cmd is None:
@@ -48,7 +53,8 @@ class CodexAdapter(Adapter):
             cmd = [cmd]
         self.proc = subprocess.Popen(
             list(cmd), cwd=self.cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, text=True, encoding="utf-8", bufsize=1)
+            stderr=subprocess.PIPE, text=True, encoding="utf-8", bufsize=1,
+            env=self._child_env())
         threading.Thread(target=self._reader, daemon=True).start()
         threading.Thread(target=self._drain_err, daemon=True).start()
         try:

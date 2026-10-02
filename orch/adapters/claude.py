@@ -31,13 +31,18 @@ class ClaudeAdapter(Adapter):
     def alive(self):
         return self.proc is not None and self.proc.poll() is None
 
+    def _child_env(self):
+        env = {k: v for k, v in os.environ.items() if (not k.startswith("CLAUDE_CODE_") or k == "CLAUDE_CODE_GIT_BASH_PATH") and k != "CLAUDECODE"}
+        env.update({str(k): str(v) for k, v in (self.opts.get("env") or {}).items()})
+        return env
+
     def start(self):
         exe = self.opts.get("command") or shutil.which("claude") or "claude"
         cmd = [exe, "-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
                "--include-partial-messages", "--permission-mode", "bypassPermissions", "--model", self.model]
         if self.session_id:
             cmd += ["--resume", self.session_id]
-        env = {k: v for k, v in os.environ.items() if (not k.startswith("CLAUDE_CODE_") or k == "CLAUDE_CODE_GIT_BASH_PATH") and k != "CLAUDECODE"}
+        env = self._child_env()
         self.proc = subprocess.Popen(cmd, cwd=self.cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                      stderr=subprocess.DEVNULL, text=True, encoding="utf-8", bufsize=1, env=env)
         threading.Thread(target=self._reader, args=(self.proc,), daemon=True).start()
