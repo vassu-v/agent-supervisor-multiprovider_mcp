@@ -97,6 +97,27 @@ def api(path, body, query, who):
     if path == "/api/declare":
         aid = who["aid"] if is_agent else body["id"]
         return o.declare(aid, body.get("goal"), body.get("paths"), by)
+    if path in ("/api/announce", "/api/ask"):
+        ws = _own_ws(who) if is_agent else (body.get("ws") or None)
+        if not ws:
+            raise ValueError("ws is required (the workspace id to post to; see /api/workspaces)")
+        if path == "/api/announce":
+            return o.board_post(ws, by, body.get("kind", "info"), body["text"], body.get("paths"))
+        return o.board_ask(ws, by, body["text"], body.get("paths"))
+    if path == "/api/answer":
+        pid = _int(body["id"], "id")
+        q = o.store.get_post(pid)
+        if not q:
+            raise KeyError(f"post {pid}")
+        if is_agent and q["ws"] != _own_ws(who):
+            raise PermissionError("that question is in a different workspace")
+        return o.board_answer(pid, by, body["text"], ws=q["ws"])
+    if path == "/api/board":
+        ws = _own_ws(who) if is_agent else (body.get("ws") or None)
+        if not ws:
+            raise ValueError("ws is required (the workspace id to read; see /api/workspaces)")
+        kinds = [k for k in str(body.get("kind") or "").split(",") if k] or None
+        return o.board_read(ws, _int(body.get("since", 0), "since"), kinds, _int(body.get("n", 100), "n"))
     if path == "/api/briefing":
         ws = _own_ws(who) if is_agent else body.get("ws")
         return {"text": o.briefing(ws, who["aid"] if is_agent else None)}
@@ -151,7 +172,7 @@ def api(path, body, query, who):
 
 PUBLIC = {"/api/health"}
 WRITES = {"/api/spawn", "/api/send", "/api/interrupt", "/api/stop", "/api/resolve", "/api/provider", "/api/hello",
-          "/api/declare"}
+          "/api/declare", "/api/announce", "/api/ask", "/api/answer"}
 MAX_BODY = 1_000_000
 CSP = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; "
        "img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
