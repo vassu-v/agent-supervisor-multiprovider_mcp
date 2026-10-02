@@ -160,12 +160,14 @@ class Policy:
                 return "escalate", f"risky action: {m.group(0).strip()[:60]!r}"
         if g.get("outside_cwd") and cwd:
             base = os.path.normcase(os.path.abspath(cwd))
-            ctl = os.path.normcase(os.path.abspath(os.path.join(HERE, "agentctl.py")))
+            # the orchestrator CLI an agent is told to run is not "outside": allow exactly the interpreter and agentctl.py
+            ctl = {os.path.normcase(os.path.abspath(os.path.join(HERE, "agentctl.py"))),
+                   os.path.normcase(os.path.abspath(sys.executable))}
             text = re.sub(r"[A-Za-z][A-Za-z0-9+.-]*://\S+", " ", s)          # URLs are not filesystem paths
             for tup in re.findall(r'"([A-Za-z]:[\\/][^"]*)"|\'([A-Za-z]:[\\/][^\']*)\'|([A-Za-z]:[\\/][^\s"\'|;&<>]*)', text):
                 m = next(x for x in tup if x)
                 full = os.path.normcase(os.path.abspath(m))
-                if full == ctl:
+                if full in ctl:
                     continue                                                  # agents may call the orchestrator CLI
                 try:
                     inside = os.path.commonpath([base, full]) == base

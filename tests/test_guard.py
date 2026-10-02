@@ -20,6 +20,11 @@ def check(name, inp, expect, cwd=CWD):
         fails.append((name, got, why))
 
 
+# the orchestrator CLI line every agent is told to run must pass (found by a live test with real agents)
+_cli = '"%s" "%s" announce "API v1 is ready" --kind done' % (sys.executable, os.path.join(ROOT, "agentctl.py"))
+check("agent runs the orchestrator CLI (interpreter + agentctl.py)", _cli, "pass")
+check("another interpreter path is still outside cwd", r'"C:\Other\python.exe" script.py', "escalate")
+
 # harmless things that used to be flagged
 check("commit message containing 'shutdown'", 'git commit -m "graceful shutdown handler"', "pass")
 check("process.env.X is not a .env file", 'node -e "console.log(process.env.HOME)"', "pass")
