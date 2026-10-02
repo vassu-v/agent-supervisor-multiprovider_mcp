@@ -10,7 +10,8 @@ import threading
 import time
 import uuid
 
-from orch import providers  # noqa: E402
+from orch import identity, providers  # noqa: E402
+from orch import workspace as wsmod  # noqa: E402
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOME = os.path.abspath(os.environ.get("SWITCHYARD_HOME") or HERE)       # logs, db, token, config live here (tests isolate it)
@@ -30,6 +31,9 @@ PREAMBLE = """[orchestrator rules - follow silently]
 4. Your agent id is {aid}. Dangerous actions (git push, deleting trees, secrets, external POSTs, installs) get escalated - prefer safe alternatives.
 5. Providers in this fleet (only use available ones):
 {providers}
+6. You are agent {aid}{parent_line} in workspace "{ws_name}". Other agents in this workspace (declared paths are advisory, nothing
+   locks files, so check before editing the same file):
+{peers}
 --- task ---
 """
 
@@ -170,6 +174,11 @@ class AgentRec:
         self.restarts = 0
         self.guard_hits = []
         self.stopped_by = None
+        self.parent = None                        # aid of the agent that spawned this one (hierarchy)
+        self.ws = self.ws_name = self.ws_root = None
+        self.subdir = ""
+        self.goal, self.paths = "", []            # declared by the agent/spawner; advisory only
+        self.session = None                       # id of the client session that spawned it
         self.logpath = os.path.join(LOGS, aid + ".jsonl")
 
     def info(self, full=False):
@@ -179,6 +188,8 @@ class AgentRec:
              "usage": self.usage, "restarts": self.restarts, "session": getattr(self.adapter, "session_id", None),
              "caps": getattr(self.adapter, "capabilities", {}), "needs_review": self.review and self.status == "idle",
              "stopped_by": self.stopped_by, "age_s": round(now() - self.created),
+             "parent": self.parent, "workspace": self.ws, "workspace_name": self.ws_name, "subdir": self.subdir,
+             "goal": self.goal, "paths": self.paths, "created": self.created,
              "last_text": (last.get("response") or last.get("partial") or "")[-300:]}
         if full:
             d["turns_full"] = self.turns
@@ -195,6 +206,9 @@ class Orchestrator:
         self.audit = collections.deque(maxlen=1000)
         self.lock = threading.RLock()
         self.subscribers = []
+        self.tokens = identity.TokenRegistry()    # per-agent tokens (agents never hold the admin token)
+        self.sessions = identity.SessionRegistry()  # attached clients (MCP bridges, CLI, dashboard)
+        self.url = "http://127.0.0.1:" + os.environ.get("ORCH_PORT", "8765")
 
     # ------------------------------------------------------------ helpers
     def _load(self, provider):
@@ -221,7 +235,24 @@ class Orchestrator:
         return a
 
     # ------------------------------------------------------------ spawn
-    def spawn(self, task, cwd, provider="auto", model=None, tier=None, aid=None, owner="external", opts=None):
+    @staticmethod
+    def _clean_goal_paths(goal, paths):
+        if goal is not None:
+            goal = str(goal).strip()
+            if len(goal) > 200:
+                raise ValueError("goal must be 200 characters or fewer")
+        if paths is not None:
+            if isinstance(paths, str):
+                paths = [p for p in re.split(r"[,\n]", paths)]
+            if not isinstance(paths, (list, tuple)):
+                raise ValueError("paths must be a list of globs or a comma-separated string")
+            paths = [str(p).strip() for p in paths if str(p).strip()]
+            if len(paths) > 20 or any(len(p) > 200 for p in paths):
+                raise ValueError("paths: at most 20 entries of at most 200 characters")
+        return goal, paths
+
+    def spawn(self, task, cwd, provider="auto", model=None, tier=None, aid=None, owner="external", opts=None,
+              goal=None, paths=None, parent=None, session=None):
         if not task or not str(task).strip():
             raise ValueError("task is required")
         if aid is not None and not re.fullmatch(r"[A-Za-z0-9_-]{1,32}", str(aid)):
@@ -231,6 +262,20 @@ class Orchestrator:
         cwd = os.path.abspath(cwd)
         if not os.path.isdir(cwd) and not os.path.isdir(os.path.dirname(cwd)):
             raise ValueError(f"cwd {cwd} does not exist and neither does its parent; create the parent first (typo guard)")
+        try:
+            ws = wsmod.resolve(cwd)
+        except ValueError as e:
+            raise ValueError(f"workspace: {e}")
+        goal, paths = self._clean_goal_paths(goal, paths)
+        if parent:                                # an agent spawning a child: enforce the hierarchy limits
+            with self.lock:
+                view = {k: {"parent": a.parent, "status": a.status} for k, a in self.agents.items()}
+                pa = self.agents.get(parent)
+            ok, why = identity.can_spawn(view, parent)
+            if not ok:
+                raise PermissionError(why)
+            if not wsmod.contains(pa.ws_root, cwd):
+                raise PermissionError("a child must work inside its parent's workspace")
         with self.lock:
             busy = sum(1 for a in self.agents.values() if a.status in ("busy", "starting"))
             cap = providers.load_config()["max_concurrent"]
@@ -242,6 +287,8 @@ class Orchestrator:
                 raise ValueError(f"agent id {aid} exists")
             os.makedirs(cwd, exist_ok=True)
             rec = AgentRec(aid, route["provider"], route["model"], cwd, route["tier"], owner, route.get("review"))
+            rec.parent, rec.ws, rec.ws_name, rec.ws_root, rec.subdir = parent or None, ws["id"], ws["name"], ws["root"], ws["subdir"]
+            rec.goal, rec.paths, rec.session = goal or "", paths or [], session
             self.agents[aid] = rec
         notes = load_policy()["shared_notes_file"]
         np = os.path.join(cwd, notes)
@@ -254,18 +301,25 @@ class Orchestrator:
                 self._dir_snap[key] = {fn: (_hash(os.path.join(cwd, fn)), self._read(os.path.join(cwd, fn)))
                                        for fn in load_policy()["mirror_files"]}
         self._audit("spawn", agent=aid, provider=rec.provider, model=rec.model, cwd=cwd, tier=rec.tier,
-                    reasons=route["reasons"], owner=owner)
+                    reasons=route["reasons"], owner=owner, parent=parent, workspace=rec.ws, goal=rec.goal, paths=rec.paths)
+        tok = self.tokens.mint(aid)               # this agent's own credential: limited scope, revoked when it ends
+        opts = dict(opts or {})
+        opts["env"] = {**(opts.get("env") or {}), "ORCH_URL": self.url, "ORCH_TOKEN": tok, "ORCH_AGENT": aid,
+                       "ORCH_WORKSPACE": ws["id"], "ORCH_PARENT": parent or ""}
         try:
             cls = self._load(rec.provider)
-            rec.adapter = cls(aid, cwd, rec.model, lambda ev, r=rec: self._on_event(r, ev), opts or {})
+            rec.adapter = cls(aid, cwd, rec.model, lambda ev, r=rec: self._on_event(r, ev), opts)
             rec.adapter.start()
         except Exception as e:
             rec.status = "dead"
+            self.tokens.revoke(aid)
             self._audit("spawn_failed", agent=aid, error=repr(e))
             raise RuntimeError(f"could not start {rec.provider}: {e}") from e
         orch_cli = os.path.join(HERE, "agentctl.py")
         full = PREAMBLE.format(cwd=cwd, notes=notes, orch_cli=orch_cli, aid=aid, py=sys.executable,
-                               providers=providers.summary_text()) + task
+                               providers=providers.summary_text(),
+                               parent_line=f" (spawned by {parent})" if parent else "", ws_name=rec.ws_name,
+                               peers=self._peers_text(rec)) + task
         self._deliver(rec, full, "queue", display=task)
         return rec.info() | {"route": route}
 
@@ -363,6 +417,7 @@ class Orchestrator:
             raise ValueError("a reason is required to stop an agent")
         if by != "external" and by != "dashboard" and not pol.get("any_agent_may_stop"):
             raise PermissionError("agents may not stop other agents")
+        self.tokens.revoke(aid)
         rec.stopped_by = {"by": by, "reason": reason, "ts": now()}
         self._audit("stop", agent=aid, by=by, reason=reason)
         if rec.adapter is not None:
@@ -390,6 +445,7 @@ class Orchestrator:
                 with rec.lock:
                     if ev["state"] == "dead" and rec.status != "dead":
                         rec.status = "dead"
+                        self.tokens.revoke(rec.id)
                     elif ev["state"] == "idle" and rec.status != "busy":
                         rec.status = "idle"
                     if ev.get("restarted"):
@@ -533,8 +589,92 @@ class Orchestrator:
                     pass
 
     # ------------------------------------------------------------ queries
-    def list(self):
-        return [a.info() for a in self.agents.values()]
+    def declare(self, aid, goal=None, paths=None, by="external"):
+        rec = self._get(aid)
+        goal, paths = self._clean_goal_paths(goal, paths)
+        with rec.lock:
+            if goal is not None:
+                rec.goal = goal
+            if paths is not None:
+                rec.paths = paths
+        self._audit("declare", agent=aid, by=by, goal=rec.goal, paths=rec.paths)
+        return rec.info()
+
+    def list(self, ws=None, tree=False):
+        recs = [a for a in list(self.agents.values()) if ws is None or a.ws == ws]
+        out = [a.info() for a in recs]
+        kids = {}
+        for i in out:
+            if i["parent"]:
+                kids.setdefault(i["parent"], []).append(i["id"])
+        for i in out:
+            i["children"] = kids.get(i["id"], [])
+        if tree:                                  # roots first, each followed by its descendants, with a depth for indentation
+            by_id = {i["id"]: i for i in out}
+            ordered, seen = [], set()
+
+            def walk(i, d):
+                if i["id"] in seen:
+                    return
+                seen.add(i["id"])
+                i["depth"] = d
+                ordered.append(i)
+                for c in i["children"]:
+                    if c in by_id:
+                        walk(by_id[c], d + 1)
+            for i in sorted(out, key=lambda x: x["created"]):
+                if not i["parent"] or i["parent"] not in by_id:
+                    walk(i, 0)
+            out = ordered
+        return out
+
+    def _peers_text(self, rec, limit=10):
+        peers = [a for a in list(self.agents.values()) if a is not rec and a.ws == rec.ws and a.status != "dead"]
+        if not peers:
+            return "   (none yet)"
+        lines = []
+        for a in peers[:limit]:
+            lines.append(f"   - {a.id} ({a.provider}, {a.status}){' child of ' + a.parent if a.parent else ''}: "
+                         f"{a.goal or 'no goal declared'}{' | paths: ' + ', '.join(a.paths[:5]) if a.paths else ''}")
+        if len(peers) > limit:
+            lines.append(f"   (+{len(peers) - limit} more: run `agentctl who`)")
+        return "\n".join(lines)
+
+    def workspaces(self):
+        out = {}
+        for a in list(self.agents.values()):
+            w = out.setdefault(a.ws, {"id": a.ws, "name": a.ws_name, "root": a.ws_root, "agents": 0, "busy": 0, "live": 0})
+            w["agents"] += 1
+            w["busy"] += a.status == "busy"
+            w["live"] += a.status != "dead"
+        for s in self.sessions.list_live():
+            if s.get("workspace"):
+                w = out.setdefault(s["workspace"], {"id": s["workspace"], "name": s["workspace"], "root": None,
+                                                     "agents": 0, "busy": 0, "live": 0})
+        for w in out.values():
+            w["sessions"] = [{"client": s["client"], "label": s.get("label")} for s in self.sessions.list_live()
+                             if s.get("workspace") == w["id"]]
+        return list(out.values())
+
+    def briefing(self, ws=None, aid=None):
+        """Fixed-size situational summary: used as the MCP initialize instructions and by `agentctl who`."""
+        lines = []
+        info = next((w for w in self.workspaces() if w["id"] == ws), None) if ws else None
+        if ws:
+            lines.append(f"Workspace: {info['name'] if info else ws}" + (f" ({info['root']})" if info and info.get("root") else ""))
+            sess = [f"{s['client']}{'/' + s['label'] if s.get('label') else ''}" for s in (info or {}).get("sessions", [])]
+            if sess:
+                lines.append("Attached clients: " + ", ".join(sess))
+        live = [a for a in list(self.agents.values()) if (ws is None or a.ws == ws) and a.status != "dead" and a.id != aid]
+        lines.append(f"Running agents: {len(live)}" + ("" if live else " (none)"))
+        for a in live[:10]:
+            lines.append(f"- {a.id} {a.provider} {a.status}" + (f" (child of {a.parent})" if a.parent else "")
+                         + f": {a.goal or 'no goal declared'}" + (f" | paths: {', '.join(a.paths[:4])}" if a.paths else ""))
+        if len(live) > 10:
+            lines.append(f"(+{len(live) - 10} more)")
+        if live:
+            lines.append("Declared paths are advisory: nothing locks files.")
+        return "\n".join(lines)
 
     def events(self, aid, since=0, n=100):
         rec = self._get(aid)
