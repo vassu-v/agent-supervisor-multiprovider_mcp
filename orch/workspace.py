@@ -43,10 +43,10 @@ def slug(name):
     return (s[:40].strip("-")) or "ws"
 
 
-def resolve(path, env=os.environ):
+def resolve(path, env=os.environ, override=True):
     """Return {"id","root","name","subdir"} for `path`. Raises ValueError if refused."""
-    override = env.get(ENV_OVERRIDE) if env is not None else None
-    start = _canon(_clean(override if override and override.strip() else path))
+    ov = env.get(ENV_OVERRIDE) if (override and env is not None) else None
+    start = _canon(_clean(ov if ov and ov.strip() else path))
 
     if os.path.isfile(start):
         start = os.path.dirname(start)

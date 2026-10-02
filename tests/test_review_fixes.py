@@ -171,5 +171,23 @@ class Fixes(unittest.TestCase):
         self.assertNotIn("【", txt)
 
 
+class DaemonEnvOverride(unittest.TestCase):
+    """SWITCHYARD_WORKSPACE is a client-side override. A daemon that merely has it in its environment must not map every path to it."""
+
+    def test_daemon_ignores_workspace_override_from_its_own_env(self):
+        tmp = tempfile.mkdtemp(prefix="sy-ovr-")
+        self.addCleanup(shutil.rmtree, tmp, True)
+        a, b = os.path.join(tmp, "a"), os.path.join(tmp, "b")
+        for r in (a, b):
+            os.makedirs(os.path.join(r, ".git"))
+        d = start_daemon(env={"SWITCHYARD_WORKSPACE": a})
+        self.addCleanup(d.stop)
+        ida = api(d, "GET", "/api/workspace?path=" + a)[1]["id"]
+        idb = api(d, "GET", "/api/workspace?path=" + b)[1]["id"]
+        self.assertNotEqual(ida, idb, "each path resolves on its own merits")
+        st, r = spawn_fake(d, [{"say": "x"}], os.path.join(b, "sub"), id="ovr-x")
+        self.assertEqual(r["workspace"], idb)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

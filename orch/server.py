@@ -80,7 +80,7 @@ def api(path, body, query, who):
         ws = None
         if body.get("workspace"):
             try:
-                ws = wsmod.resolve(body["workspace"])["id"]
+                ws = wsmod.resolve(body["workspace"], override=False)["id"]
             except ValueError:
                 ws = None
         s = o.sessions.hello(body.get("client") or "unknown", body.get("label"), ws, body.get("pid"))
@@ -94,7 +94,7 @@ def api(path, body, query, who):
         return o.workspaces()
     if path == "/api/workspace":
         if body.get("path"):
-            r = wsmod.resolve(body["path"])
+            r = wsmod.resolve(body["path"], override=False)
             if is_agent and r["id"] != _own_ws(who):
                 raise PermissionError("agents may only resolve paths inside their own workspace")
             return r
@@ -108,7 +108,8 @@ def api(path, body, query, who):
         if not ws:
             raise ValueError("ws is required (the workspace id to post to; see /api/workspaces)")
         if path == "/api/announce":
-            return o.board_post(ws, by, body.get("kind", "info"), body["text"], body.get("paths"))
+            return o.board_post(ws, by, body.get("kind", "info"), body["text"], body.get("paths"),
+                                _int(body["reply_to"], "reply_to") if body.get("reply_to") not in (None, "") else None)
         return o.board_ask(ws, by, body["text"], body.get("paths"))
     if path == "/api/answer":
         pid = _int(body["id"], "id")
@@ -283,8 +284,8 @@ class H(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(n) or b"{}")
             if not isinstance(body, dict):
                 raise ValueError("body must be a JSON object")
-        except ValueError as e:
-            return self._json({"error": f"invalid JSON: {e}"}, 400)
+        except (ValueError, RecursionError) as e:
+            return self._json({"error": f"invalid JSON: {type(e).__name__}"}, 400)
         if who["kind"] == "admin" and "session_id" not in who and body.get("by"):
             who["by"] = str(body["by"])[:40]          # admin CLI may label itself; agents never can (see _identify)
         try:
