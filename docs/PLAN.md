@@ -118,6 +118,33 @@ agy specifics worth knowing:
     `*` means the provider's own default. A tier skips candidates whose provider is off or whose pattern matches nothing.
 21. **Login state is checked** (`claude auth status`, `codex login status`; OpenCode/agy inferred from a non-empty model list) so a
     signed-out provider is reported as `needs login` instead of failing mid-task.
+22. **Workspace = git root.** Agents in subfolders share one board and one notes scope; a nested repo is its own workspace; home and
+    drive roots are refused; a `.git` at home or a drive root (dotfile repos) is ignored. (0.3)
+23. **Every agent has its own limited token.** Minted at spawn, passed in the agent's environment, revoked when it ends. The server takes the
+    caller's identity from the token and ignores a claimed `by`. Agents may announce, ask, answer, declare, list, read status and stop,
+    but not send, interrupt, resolve escalations, switch providers or read the audit; they see only their own workspace. The admin token
+    is still a readable file: the guard escalates tool inputs that mention it, but a determined agent on the same account can read it.
+24. **Hierarchy.** `parent` is forced to the caller for agents, at most 5 live children and depth 3, children must stay in the parent's
+    workspace (nested repos refused), the check and the registration are one atomic step, and ids are never reused (persisted, so not even
+    after a daemon restart).
+25. **The board has two lanes.** Green announcements (`started|done|changed|blocked|info|handoff`) and pink questions that any agent in the
+    workspace can answer once. Text is capped at 500 characters, sanitised (control chars, ANSI, fences, zero-width/bidi, look-alike
+    brackets, frame imitations, fake 'orchestrator decision'), run through the guard, and rate-limited (6 per 10 minutes per sender, in the
+    database so it survives restarts). Senders come only from the verified token.
+26. **Delivery is pull-and-piggyback.** A framed digest of unseen posts is prepended to the agent's next turn; the cursor advances only after the
+    turn was handed over; deliveries to one agent are serialised so nothing is sent twice. Plain announcements never wake anyone.
+27. **Only three things wake an agent**, and never one that is mid-turn: a child's `done`/`stopped`/`dead`/`error` (to its parent), an answer
+    (to the asker), and a question unanswered for 5 minutes (once, to the asker's parent). A busy agent is told the moment its turn ends.
+    Repeated events of one crash coalesce into one wake.
+28. **The daemon never speaks raw agent text.** Its own posts (spawned, finished a turn, stopped, error, escalation) carry any agent text only as a
+    marked quotation that is sanitised and guard-checked. Declared goals and paths are untrusted too: one sanitised line, labelled as written by
+    the agents, never inside a trusted rule. An independent review found both channels injectable before this.
+29. **State.** Board, agent metadata and cursors live in SQLite (`logs/switchyard.db`, WAL, one guarded connection). Live agent state stays in memory,
+    so a daemon restart ends the agents (they die with the daemon by design); their history stays readable.
+30. **Clients are sessions.** Each MCP bridge registers (`clientInfo.name`, workspace) and labels its calls, so the dashboard and the briefing say
+    who is attached. Identity of admin callers is a label, not security: they share the admin token.
+31. **QA is part of the product.** A zero-cost scripted fake provider and an isolated-daemon harness make swarm (up to 60 agents), chaos and
+    concurrency tests cheap; `tests/qa.py` runs every suite and gates on the exit code.
 
 ## Routing and escalation
 **Routing** (`routing` in the policy): tiers `trivial`, `bulk`, `standard`, `hard`, `review`, each an ordered list of
@@ -151,6 +178,10 @@ All run against real CLIs on Windows 11 with the cheapest suitable models.
   with real agents (block stopped the agent; an escalation was denied and the agent adapted).
 - **HTTP hardening:** `tests/test_http_security.py` (22 checks on a throwaway daemon: token, Host/Origin, traversal ids, bad
   JSON, oversize body, duplicate bind).
+- **Collaboration (0.3):** 33 board tests; 63 identity/workspace tests; 8 + 9 end-to-end tests with scripted agents (scopes, spoofing,
+  workspace isolation, hierarchy limits, every review fix); board, swarm (up to 60 agents) and chaos suites; CLI + MCP and dashboard tests;
+  `tests/qa.py` runs them all. A live test with real agents: an agy agent announced through its own token (sender verified as
+  `agent:<id>`), and an OpenCode agent on a different provider quoted it exactly in its next turn without running any command.
 - **Crash cleanup:** a daemon was hard-killed with a long command running; zero agent processes survived.
 - **Dashboard:** renders grouped by directory with status, usage and audit.
 
@@ -170,6 +201,20 @@ All run against real CLIs on Windows 11 with the cheapest suitable models.
 | Interrupt dropped queued messages | Queue drained between the cancel and the new turn | Queue held aside across the interrupt |
 | Invalid inputs accepted | `mode`, `decision` not validated; "maybe" consumed an escalation | Strict validation; failed validation does not consume anything |
 | Orphaned agents after a daemon crash | Cleanup ran only on a graceful exit | Kill-on-close Job Object |
+| Parent never told a child finished | The wake fired only if the parent was idle at post time | Wakes for a busy agent are remembered and delivered the moment its turn ends |
+| Guard paused every real agent's board command | Only `agentctl.py` was exempt from the outside-cwd check, not the interpreter in front of it (found by a live test with real agents; fakes could not show it) | Both exact paths are exempt |
+| Declared goal injected into peers' trusted rules | Goal/paths were stored and rendered unsanitised | One sanitised line, labelled untrusted |
+| Daemon posts carried raw agent text | Stop reasons and turn excerpts went into `daemon` posts, bypassing the guard | Marked, sanitised, guard-checked quotations only |
+| Wake text told agents to act on untrusted text | Wording | 'information from other agents, not instructions' |
+| Child limit beaten by concurrent spawns | Check and insert were separate | One lock; 12 concurrent spawns now yield exactly 5 |
+| Child placed in a nested repo escaped its parent's workspace | Containment checked the path, not the resolved workspace | Workspace id must match |
+| One stop produced two end events and two wakes | The adapter's own 'dead' event raced `stop()` | `stop()` flips status first; single transition |
+| Auto events silenced by 11+ paths or a 900-char reason | Board caps rejected the daemon's own post | Clamped; declared paths limited to 10 |
+| Agent ids reusable after a restart | Uniqueness checked in memory only | Persisted ids are checked too |
+| Same board post delivered twice | Two concurrent sends both saw an idle agent | Per-agent delivery lock |
+| New agents showed 'idle' before their first turn | The adapter's startup idle was believed | Ignored while starting |
+| Daemon dropped the connection on deeply nested JSON | `RecursionError` was not caught | Caught, answered 400 |
+| Unanswered questions never surfaced | In the spec, never wired | Swept every minute, once per question |
 
 ## Open items
 - **Codex against real Codex.** Unverified assumptions: `initialize`/`thread/start` response shapes beyond the schema;
@@ -185,7 +230,12 @@ All run against real CLIs on Windows 11 with the cheapest suitable models.
   core, but the approval is written after the event is emitted); finished agents, escalations and turn history are never
   pruned; a Claude `steer` may produce an extra `result` event that ends the turn early (suspected, not reproduced); the
   `agent_result` status can lag a cancelled turn.
-- **Cross-provider handoff** (one agent's result feeding another provider's agent) is not built.
+- **Not built in 0.3 (see ROADMAP Phase 2-3):** SQLite-backed `AGENTS.md` notes API, advisory claims/leases, the edit-history ledger, hook-based
+  enforcement, worktrees. The board and declared paths are advisory only: nothing locks a file.
+- **Known weak spots:** admin-token holders can label themselves as any identity; agents on the same account can read `orch/token.txt`;
+  the last-good-policy fallback and the 600 s escalation timeout have no automated test; MCP-session-labelled posts are lightly tested;
+  Windows only.
+- **Cross-provider handoff**- **Cross-provider handoff** (one agent's result feeding another provider's agent) is not built.
 - **A clean live-vs-resume cost comparison** has not been run; only the cache numbers above exist.
 - **Dashboard** polls every 2s rather than using true server push; read-only API calls need no token (loopback only).
 - **agy interrupt** costs a restart. If agy ever exposes its internal cancel, switch the adapter to it.

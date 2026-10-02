@@ -52,7 +52,7 @@ Use the cheapest model per provider for tests (OpenCode lists free models, ids e
 - **MCP:** register the stdio server `python <repo>/orch/mcp_bridge.py` in the client. Claude Code:
   `claude mcp add switchyard -- python <repo>/orch/mcp_bridge.py`. The daemon must be running.
 - **Skills:** copy `skills/switchyard-use` into the agent's skills directory.
-- Tool list: `docs/mcp.md`. From 0.3 the MCP `initialize` instructions are a workspace briefing (peers, open questions).
+- Tool list: `docs/mcp.md`. The MCP `initialize` instructions are a workspace briefing (peers, open questions).
 
 ## 5. Tune policy (`orch/policy.json`, hot-reloaded, no restart)
 - `routing.tiers.<tier>.candidates`: ordered `provider:pattern` list. The pattern is a glob matched against the **discovered** model
@@ -81,8 +81,8 @@ The guard is detect-and-react, not a sandbox. For hard limits use the provider's
 | `model ... is not offered by ...` | The id is not in the live list: run `models <provider>` and use one of those |
 | Agent stuck `busy` | Slow model or long command: `tail <id>`. Free models can take a minute |
 | `401 bad or missing token` | `ORCH_TOKEN` does not match `orch/token.txt` |
-| `403` from an agent (from 0.3) | Agent tokens cannot resolve escalations, switch providers or send; ask the user |
-| Need an isolated daemon for tests (from 0.3) | `SWITCHYARD_HOME=<dir>` keeps logs, db, token and config there; `SWITCHYARD_FAKE=1` adds a model-free `fake` provider |
+| `403` from an agent | Agent tokens cannot resolve escalations, switch providers, send or interrupt; ask the user |
+| Need an isolated daemon for tests | `SWITCHYARD_HOME=<dir>` keeps logs, db, token and config there; `SWITCHYARD_FAKE=1` adds a model-free `fake` provider |
 | agy interrupt shows `restarts` | Expected: agy has no native cancel, so interrupt is kill + resume |
 
 ## Local notes

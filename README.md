@@ -69,7 +69,7 @@ Words like *auth*, *secret* and *production* bump a task to `hard`. Preview with
 Next: [many agents in one repo](#run-many-agents-in-one-repo).
 
 ## Run many agents in one repo
-Available from 0.3. Each agent has its own identity, a place in a tree, and a shared board.
+Each agent has its own identity, a place in a tree, and a shared board.
 
 | Piece | What you get |
 |---|---|
@@ -108,7 +108,7 @@ Next: [limits](#know-the-limits). Every tool: [docs/mcp.md](docs/mcp.md).
 
 ## Know the limits
 - The guard reacts after a tool call starts. It cannot undo. Use a container or VM for isolation.
-- The daemon binds to `127.0.0.1`. Agents run with full permissions. Never expose the port.
+- The daemon binds to `127.0.0.1`. Agents run with full permissions and can read the admin token. Never expose the port.
 - Cheaper models make more mistakes. Verify their output.
 - Tested on Windows 11 only. Codex never ran against a real Codex.
 

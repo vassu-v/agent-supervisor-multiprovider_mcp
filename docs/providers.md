@@ -4,7 +4,7 @@ Switchyard drives four provider CLIs: agy, Claude Code, OpenCode and Codex. Inst
 
 ## States
 
-`python agentctl.py providers` and the dashboard strip show one state per provider.
+`python agentctl.py providers` and the dashboard strip show one state per provider. The CLI prints `disabled`, `not_installed` and `needs_login` for off, not installed and needs login.
 
 | State | Meaning |
 |---|---|
@@ -32,7 +32,7 @@ Copy `orch/config.example.json` to start:
   "model_cache_ttl_s": 600 }
 ```
 
-From 0.3, `max_concurrent` in the same file sets how many agents run at once (default 20).
+`max_concurrent` in the same file sets how many agents run at once (default 20).
 
 Agents learn availability three ways:
 - The MCP `initialize` instructions list it.

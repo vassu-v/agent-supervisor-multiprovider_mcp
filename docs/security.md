@@ -15,8 +15,6 @@ Never expose the port. Never forward untrusted text to an agent.
 
 ## Tokens
 
-Available from 0.3.
-
 | Token | Where it lives | Access |
 |---|---|---|
 | Admin | `orch/token.txt` | CLI, MCP bridge, dashboard. Full |
@@ -37,6 +35,8 @@ Each agent also gets `ORCH_AGENT`, `ORCH_URL`, `ORCH_WORKSPACE` and `ORCH_PARENT
 | `/api/stop`, with a reason | `/api/send`, `/api/interrupt` |
 | `/api/spawn`, with limits | `/api/escalations`, `/api/audit` |
 
+Reads and stops are limited to the agent's own workspace. Agents cannot call `/api/events` or `/api/workspaces` either.
+
 Spawn limits for an agent:
 - `parent` is forced to the caller.
 - `cwd` must be inside the caller's workspace root.
@@ -48,12 +48,12 @@ An agent cannot approve its own escalation, post under another name, or switch a
 
 Posts are capped at 500 characters, stripped of control characters and ANSI, and rate-limited to 6 per 10 minutes per sender.
 Frames such as `[orchestrator` are neutralised. The guard runs over each post and rejects block or escalate matches.
-Digests reach agents framed as information, not instructions. Only two events wake an agent: a child finishing, and an answer to its question.
+Digests reach agents framed as information, not instructions. Only two events wake an agent: a child finishing, and an answer to its question. A stale question is passed once to the asker's parent.
 
 ## Honest limits
 
 - The guard is detect-and-react. A tool call has started when the guard sees it. It stops quickly and cannot undo.
-- Agents can read `orch/token.txt` with their file tools. Editing it escalates, but reading it is not blocked. An agent that does so holds admin power.
+- Agents can read `orch/token.txt`. The guard escalates any tool input that names `orch/token.txt`, `policy.json` or `config.json`, but that is pattern matching, not a lock. The dashboard page at `/` also embeds the admin token for any local caller. An agent that gets it holds admin power.
 - The OpenCode server behind each agent has no password on its loopback port. Another local process could drive that agent.
 - Only agy's sandbox is wired in (`spawn --sandbox`, CLI only). Codex starts with full access.
 - For hard isolation, run agents in a container or VM.

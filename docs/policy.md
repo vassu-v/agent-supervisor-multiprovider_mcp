@@ -40,7 +40,7 @@ Every tool call is matched against regexes when it starts.
 | block | `rm -rf /`, `format X:`, `diskpart`, `reg delete HK`, `shutdown`, uploading secrets | Agent stops at once |
 
 Lists live under `guard.block_patterns` and `guard.escalate_patterns`. `guard.outside_cwd` is `escalate`.
-Tool input is capped at 4000 characters so matching stays fast. Editing `orch/policy.json`, `token.txt` or `config.json` from an agent escalates.
+Tool input is capped at 4000 characters so matching stays fast. Any tool input that names `orch/policy.json`, `orch/token.txt` or `orch/config.json` escalates, reads included.
 
 ## Escalations
 
@@ -54,14 +54,14 @@ python agentctl.py resolve <eid> allow|deny --note "..."
 
 ## Stopping agents
 
-`stop_authority` lets any agent stop any agent. A reason is required and every stop is audited with who and why.
+`stop_authority` lets any agent stop any agent in its workspace. A reason is required and every stop is audited with who and why.
 
 ## AGENTS.md mirroring
 
 `AGENTS.md` is the shared notes file. The daemon creates it in each agent's directory.
 If a harness writes `CLAUDE.md`, `GEMINI.md`, `QWEN.md`, `.cursorrules` or `copilot-instructions.md` (`mirror_files`), nothing is blocked.
 New lines are copied into `AGENTS.md`.
-From 0.3, one snapshot is kept per directory. A change is mirrored once, credited to the agent when exactly one is busy there, else `unknown`.
-Per-workspace rendering of notes comes in 0.4.
+One snapshot is kept per directory. A change is mirrored once, credited to the agent when no other agent is busy there, else `unknown`.
+Notes kept in SQLite and rendered per workspace are not built yet. See [ROADMAP.md](ROADMAP.md).
 
 Next: [security.md](security.md).

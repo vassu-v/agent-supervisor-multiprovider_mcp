@@ -3,6 +3,13 @@
 Synthesis of five independent Opus design reviews (announce board, locking and edit history, workspaces, red team and QA,
 README). Nothing here is built yet. Where the reviewers disagreed, the choice and the reason are stated.
 
+## Status (update)
+- **Phase 0 done:** per-agent tokens and scopes, one mirror snapshot per directory, configurable agent cap (default 20), README restructure and docs split.
+- **Phase 1 done:** workspaces, sessions, hierarchy (parent, goal, paths), the briefing, the two-lane board with digest delivery, auto events, wakes,
+  stale-question surfacing, dashboard tabs/tree/board, CLI and MCP tools. Details and the decisions behind them: `docs/PLAN.md` (22-31).
+- **QA built first, as planned:** scripted fake provider, harness, swarm/chaos/e2e suites, `tests/qa.py`. They found and fixed real bugs (see PLAN).
+- **Not started:** Phase 2 (SQLite notes API, advisory claims/leases, edit ledger) and Phase 3 (hook enforcement, worktrees).
+
 ## The one finding that changes the order
 Agents cannot be told apart today. They are told to run `agentctl.py`, which reads the admin token from `orch/token.txt`, and
 the caller name in each request (`by`) is whatever the caller says. So any agent can approve its own escalation, spawn more

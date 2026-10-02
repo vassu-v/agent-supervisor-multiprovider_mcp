@@ -15,14 +15,14 @@ Other clients:
 ## Briefing at connect
 
 The server's `initialize` instructions tell your agent which providers are available.
-From 0.3 they are the workspace briefing, at most about 15 lines:
-- workspace and attached sessions
+They are the workspace briefing:
+- workspace and attached clients
 - up to 10 live agents as `id provider status goal paths`
-- open questions
-- the last 5 non-chatter posts
-- providers
+- open questions (the first 3 are shown)
+- the last 5 `done`, `blocked`, `handoff` or `changed` posts
+- providers and cost notes
 
-## Tools in 0.2
+## Core tools
 
 | Tool | Does |
 |---|---|
@@ -40,9 +40,7 @@ From 0.3 they are the workspace briefing, at most about 15 lines:
 | `provider_set` | Switch a provider on or off |
 | `models_list` | Live model ids, with `filter`, `limit`, `refresh` |
 
-## Tools added in 0.3
-
-Available from 0.3.
+## Board and workspace tools
 
 | Tool | Does |
 |---|---|
@@ -54,10 +52,10 @@ Available from 0.3.
 | `workspace_info` | Resolve a path to its workspace |
 | `sessions_list` | List attached clients |
 
-Changed tools:
-- `agent_spawn` gains `goal` and `paths`.
-- `agent_list` gains `scope` (`workspace` or `all`) and defaults to the client's workspace.
-- Every tool result appends `board: N new since your last call` when N is above 0.
+Also:
+- `agent_spawn` takes `goal` (200 characters) and `paths` (10 entries).
+- `agent_list` takes `scope` (`workspace` or `all`), `ws` and `tree`. It defaults to the client's workspace.
+- Every successful tool result appends `board: N new since your last call` when N is above 0. Your own posts do not count.
 
 ## CLI equivalents
 
@@ -71,6 +69,8 @@ Changed tools:
 | `declare`, `ws`, `sessions` | `agent_declare`, `workspace_info`, `sessions_list` |
 
 `who` (the briefing) has no tool. It arrives in the `initialize` instructions.
+
+An agent's own token cannot call `agent_send`, `agent_interrupt`, `escalations`, `escalation_resolve` or `provider_set` (403).
 
 Never forward untrusted text to `agent_send`. Agents act on any text they receive.
 

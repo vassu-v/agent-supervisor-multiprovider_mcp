@@ -13,8 +13,8 @@ decision is in [`docs/PLAN.md`](docs/PLAN.md).
 (Commands say `python`; use `py -3.10` or `python3` if that is how Python 3.10+ starts on your machine.)
 1. Start the daemon (own terminal, keep it running): `python agentctl.py serve` (port 8765, override with `ORCH_PORT`).
 2. Pick one:
-   - **MCP** (best for agents): add the stdio server `python <repo>/orch/mcp_bridge.py` to your client (13 tools, plus 7 board
-     and workspace tools from 0.3; the `initialize` instructions list providers). See [`docs/mcp.md`](docs/mcp.md).
+   - **MCP** (best for agents): add the stdio server `python <repo>/orch/mcp_bridge.py` to your client (20 tools: 13 core, 7 board
+     and workspace; the `initialize` instructions are a workspace briefing with providers). See [`docs/mcp.md`](docs/mcp.md).
    - **CLI**: `python agentctl.py <cmd>` (below), JSON output.
    - **Skills**: copy `skills/switchyard-use` (and `switchyard-setup`) into your agent's skills folder.
 3. Dashboard for humans: http://127.0.0.1:8765/
@@ -22,18 +22,18 @@ decision is in [`docs/PLAN.md`](docs/PLAN.md).
 ## Commands (`python agentctl.py ...`)
 | cmd | |
 |---|---|
-| `spawn "<task>" --cwd DIR [--provider agy\|claude\|opencode\|codex\|auto] [--model M] [--tier T] [--id ID] [--sandbox]` | start an agent; `auto` routes by tier and keywords; `--sandbox` is agy-only and CLI-only |
+| `spawn "<task>" --cwd DIR [--provider agy\|claude\|opencode\|codex\|auto] [--model M] [--tier T] [--id ID] [--goal TEXT] [--paths a,b] [--sandbox]` | start an agent; `auto` routes by tier and keywords; `--sandbox` is agy-only and CLI-only |
 | `list`, `status ID`, `tail ID [N]`, `events ID [SINCE]`, `result ID` | observe |
 | `send ID "<msg>" [--mode queue\|steer\|interrupt]` | queue = after the turn; steer = inject mid-turn if supported, else queued; interrupt = cancel the turn, keep the session |
-| `interrupt ID`, `stop ID --reason "<why>"` | a reason is required to stop; any agent may stop any agent; audited |
+| `interrupt ID`, `stop ID --reason "<why>"` | a reason is required to stop; any agent may stop agents in its workspace; audited |
 | `escalations`, `resolve EID allow\|deny [--note]` | decisions the guard is waiting for |
 | `route "<task>"`, `audit` | preview routing, see who did what |
 | `providers`, `providers disable\|enable NAME` | which providers are ready / off / not installed / need login; switch one off or on |
-| `models [PROVIDER] [--refresh] [--full]` | models each provider reports right now (discovered live, cached 10 min; never hardcoded) |
+| `models [PROVIDER] [--filter TEXT] [--limit N] [--refresh] [--full]` | models each provider reports right now (discovered live, cached 10 min; never hardcoded) |
 
-Env: `ORCH_URL` (default `http://127.0.0.1:8765`), `ORCH_TOKEN` (default: `orch/token.txt`), `ORCH_AGENT` (your id, for audit).
+Env: `ORCH_URL` (default `http://127.0.0.1:8765`), `ORCH_TOKEN` (default: `orch/token.txt`), `ORCH_AGENT` (your id, for audit), `ORCH_WORKSPACE` (default `--ws`), `SWITCHYARD_SESSION`.
 
-### Shared board and workspaces (available from 0.3)
+### Shared board and workspaces
 | cmd | |
 |---|---|
 | `announce "<text>" [--kind done\|started\|changed\|blocked\|info\|handoff] [--paths a,b]` | tell the workspace something happened |
@@ -44,7 +44,7 @@ Env: `ORCH_URL` (default `http://127.0.0.1:8765`), `ORCH_TOKEN` (default: `orch/
 | `list [--ws ID] [--all] [--tree]` | agents in a workspace, everywhere, or as a tree |
 
 A spawned agent gets its own token as `ORCH_TOKEN`, plus `ORCH_AGENT`, `ORCH_WORKSPACE`, `ORCH_PARENT`. It cannot resolve
-escalations, switch providers or send to other agents. Details: [`docs/security.md`](docs/security.md),
+escalations, switch providers, send or interrupt, or read escalations and the audit log. Details: [`docs/security.md`](docs/security.md),
 [`docs/collaboration.md`](docs/collaboration.md).
 
 ## Providers and models
