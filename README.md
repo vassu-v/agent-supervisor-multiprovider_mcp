@@ -19,7 +19,8 @@ $ python agentctl.py send <id> "also cover the timeout case" --mode interrupt   
 $ python agentctl.py stop <id> --reason "wrong environment"
 ```
 
-<p align="center"><img src="docs/assets/dashboard.jpg" alt="The Switchyard dashboard: agents grouped by directory, a pending guard decision, and provider switches" width="860"></p>
+<p align="center"><img src="docs/assets/dashboard.jpg" alt="The Switchyard dashboard: workspace tabs, an agent tree, a green announcements lane, a pink open-questions lane and a pending guard decision" width="860"></p>
+<p align="center"><sub>Scripted demo agents, so no model was called. Two clients are attached to the <code>shop</code> workspace.</sub></p>
 
 ## Start in 4 commands
 You need Python 3.10+ and one logged-in provider CLI. Per-OS steps: [docs/install.md](docs/install.md).
