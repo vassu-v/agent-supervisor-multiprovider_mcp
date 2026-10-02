@@ -27,7 +27,7 @@ Python 3.10 stdlib only. Windows-first. All new modules live in `orch/`.
 - Notes file stays per working directory (`AGENTS.md` in the agent's cwd) in 0.3; per-workspace render is 0.4.
 
 ## 3. Hierarchy
-`AgentRec` gains: `parent` (aid|None), `workspace` (id), `ws_root`, `subdir`, `goal` (<=200 chars), `paths` (<=20 globs, declared,
+`AgentRec` gains: `parent` (aid|None), `workspace` (id), `ws_root`, `subdir`, `goal` (<=200 chars), `paths` (<=10 globs, declared,
 advisory), `owner` (identity string), `session` (creator session id|None), `children` (derived). Spawn args gain `goal`, `paths`,
 `parent` (admin only; agents get parent forced). `/api/list` accepts `ws=<id>`, `all=1`, `tree=1`; default (no params) = everything for
 admin clients (CLI/dashboard), the bridge passes its workspace.
