@@ -22,7 +22,8 @@ def token():
     if t:
         return t
     try:
-        return open(os.path.join(HERE, "orch", "token.txt")).read().strip()
+        home = os.path.abspath(os.environ.get("SWITCHYARD_HOME") or HERE)
+        return open(os.path.join(home, "orch", "token.txt")).read().strip()
     except OSError:
         return ""
 

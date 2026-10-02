@@ -10,10 +10,11 @@ from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from orch import providers  # noqa: E402
-from orch.core import HERE, Orchestrator  # noqa: E402
+from orch.core import HERE, HOME, Orchestrator  # noqa: E402
 
 PORT = int(os.environ.get("ORCH_PORT", "8765"))
-TOKEN_FILE = os.path.join(HERE, "orch", "token.txt")
+TOKEN_FILE = os.path.join(HOME, "orch", "token.txt")
+os.makedirs(os.path.dirname(TOKEN_FILE), exist_ok=True)
 ORCH = Orchestrator()
 
 

@@ -13,11 +13,13 @@ import uuid
 from orch import providers  # noqa: E402
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOGS = os.path.join(HERE, "logs")
+HOME = os.path.abspath(os.environ.get("SWITCHYARD_HOME") or HERE)       # logs, db, token, config live here (tests isolate it)
+LOGS = os.path.join(HOME, "logs")
 POLICY = os.path.join(HERE, "orch", "policy.json")
-MAX_CONCURRENT = 8
 PROVIDERS = {"agy": "orch.adapters.agy:AgyAdapter", "claude": "orch.adapters.claude:ClaudeAdapter",
              "codex": "orch.adapters.codex:CodexAdapter", "opencode": "orch.adapters.opencode:OpenCodeAdapter"}
+if os.environ.get("SWITCHYARD_FAKE"):                                    # zero-cost scripted provider for QA
+    PROVIDERS["fake"] = "tests.fake.adapter:FakeAdapter"
 
 PREAMBLE = """[orchestrator rules - follow silently]
 1. Work ONLY inside your working directory ({cwd}). Do not read/write outside it unless the task says so.
@@ -167,7 +169,6 @@ class AgentRec:
         self.lock = threading.RLock()
         self.restarts = 0
         self.guard_hits = []
-        self.md_snap = {}
         self.stopped_by = None
         self.logpath = os.path.join(LOGS, aid + ".jsonl")
 
@@ -188,6 +189,7 @@ class Orchestrator:
     def __init__(self):
         os.makedirs(LOGS, exist_ok=True)
         self.agents = {}
+        self._dir_snap = {}                       # cwd -> {file: (hash, bytes)}; one snapshot per directory
         self.policy = Policy()
         self.escalations = {}
         self.audit = collections.deque(maxlen=1000)
@@ -231,8 +233,9 @@ class Orchestrator:
             raise ValueError(f"cwd {cwd} does not exist and neither does its parent; create the parent first (typo guard)")
         with self.lock:
             busy = sum(1 for a in self.agents.values() if a.status in ("busy", "starting"))
-            if busy >= MAX_CONCURRENT:
-                raise RuntimeError(f"concurrency cap {MAX_CONCURRENT} reached")
+            cap = providers.load_config()["max_concurrent"]
+            if busy >= cap:
+                raise RuntimeError(f"concurrency cap {cap} reached (raise max_concurrent in orch/config.json)")
             route = self.policy.route(task, tier, provider, model, self.available())
             aid = aid or "a" + uuid.uuid4().hex[:5]
             if aid in self.agents and self.agents[aid].status != "dead":
@@ -245,8 +248,11 @@ class Orchestrator:
         if not os.path.exists(np):
             with open(np, "w", encoding="utf-8") as f:
                 f.write("# AGENTS.md\n\nShared notes for every agent working in this directory.\n\n## Agent notes\n")
-        for fn in load_policy()["mirror_files"]:
-            rec.md_snap[fn] = (_hash(os.path.join(cwd, fn)), self._read(os.path.join(cwd, fn)))
+        with self.lock:
+            key = os.path.normcase(cwd)
+            if key not in self._dir_snap:
+                self._dir_snap[key] = {fn: (_hash(os.path.join(cwd, fn)), self._read(os.path.join(cwd, fn)))
+                                       for fn in load_policy()["mirror_files"]}
         self._audit("spawn", agent=aid, provider=rec.provider, model=rec.model, cwd=cwd, tier=rec.tier,
                     reasons=route["reasons"], owner=owner)
         try:
@@ -425,21 +431,31 @@ class Orchestrator:
 
     def _check_forbidden(self, rec):
         """Harness-specific notes files (CLAUDE.md, GEMINI.md...) are NOT forbidden: if an agent or user changed one,
-        leave it alone and mirror the newly added lines into AGENTS.md ('## Agent notes') so knowledge ends up in one place."""
+        leave it alone and mirror the newly added lines into AGENTS.md ('## Agent notes') so knowledge ends up in one place.
+        One snapshot per directory: a change is mirrored exactly once, however many agents share the directory. It is credited
+        to the agent only when it is the only one active there; otherwise to 'unknown'."""
+        key = os.path.normcase(rec.cwd)
         notes = os.path.join(rec.cwd, load_policy()["shared_notes_file"])
-        for fn, (h, old) in list(rec.md_snap.items()):
-            p = os.path.join(rec.cwd, fn)
-            if _hash(p) == h:
-                continue
-            new = self._read(p) or b""
-            added = [l for l in new.decode("utf-8", "replace").splitlines()
-                     if l.strip() and l not in (old or b"").decode("utf-8", "replace").splitlines()]
-            rec.md_snap[fn] = (_hash(p), new)
-            if added:
-                with open(notes, "a", encoding="utf-8") as f:
-                    f.write(f"\n<!-- mirrored from {fn} by agent {rec.id} -->\n" + "\n".join(added) + "\n")
-                self._audit("mirrored_to_agents_md", agent=rec.id, file=fn, lines=len(added))
-                self._on_event(rec, {"type": "guard", "decision": "mirrored", "why": f"{len(added)} line(s) from {fn} copied to AGENTS.md"})
+        with self.lock:
+            snap = self._dir_snap.setdefault(key, {})
+            others = [a for a in self.agents.values() if a is not rec and os.path.normcase(a.cwd) == key
+                      and a.status in ("busy", "starting")]
+            who = rec.id if not others else "unknown"
+            for fn in load_policy()["mirror_files"]:
+                h, old = snap.get(fn, (None, None))
+                p = os.path.join(rec.cwd, fn)
+                if _hash(p) == h:
+                    continue
+                new = self._read(p) or b""
+                snap[fn] = (_hash(p), new)
+                added = [l for l in new.decode("utf-8", "replace").splitlines()
+                         if l.strip() and l not in (old or b"").decode("utf-8", "replace").splitlines()]
+                if added:
+                    with open(notes, "a", encoding="utf-8") as f:
+                        f.write(f"\n<!-- mirrored from {fn} by agent {who} -->\n" + "\n".join(added) + "\n")
+                    self._audit("mirrored_to_agents_md", agent=who, file=fn, lines=len(added))
+                    self._on_event(rec, {"type": "guard", "decision": "mirrored",
+                                         "why": f"{len(added)} line(s) from {fn} copied to AGENTS.md"})
 
     # ------------------------------------------------------------ guard / escalation
     def _check_guard(self, rec, ev):

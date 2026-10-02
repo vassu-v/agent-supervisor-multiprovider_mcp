@@ -13,8 +13,10 @@ import threading
 import time
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CONFIG = os.path.join(HERE, "orch", "config.json")
-NAMES = ["agy", "claude", "opencode", "codex"]
+HOME = os.path.abspath(os.environ.get("SWITCHYARD_HOME") or HERE)
+CONFIG = os.path.join(HOME, "orch", "config.json")
+NAMES = ["agy", "claude", "opencode", "codex"] + (["fake"] if os.environ.get("SWITCHYARD_FAKE") else [])
+ADAPTER_MODULE = {"fake": "tests.fake.adapter"}
 LOCK = threading.RLock()
 _PLOCK = {}                 # per-provider lock: only one discovery subprocess per provider at a time
 _CFG_LAST = {"data": None}
@@ -24,7 +26,7 @@ _REFRESHING = set()
 
 # ------------------------------------------------------------------ config
 def load_config():
-    cfg = {"providers": {n: {"enabled": True} for n in NAMES}, "model_cache_ttl_s": 600}
+    cfg = {"providers": {n: {"enabled": True} for n in NAMES}, "model_cache_ttl_s": 600, "max_concurrent": 20}
     user = None
     try:
         with open(CONFIG, encoding="utf-8") as f:
@@ -37,8 +39,9 @@ def load_config():
     if user:
         for n, v in (user.get("providers") or {}).items():
             cfg["providers"].setdefault(n, {}).update(v)
-        if "model_cache_ttl_s" in user:
-            cfg["model_cache_ttl_s"] = user["model_cache_ttl_s"]
+        for k in ("model_cache_ttl_s", "max_concurrent"):
+            if k in user:
+                cfg[k] = user[k]
     for n in filter(None, (x.strip() for x in os.environ.get("SWITCHYARD_DISABLE", "").split(","))):
         cfg["providers"].setdefault(n, {})["enabled"] = False
     return cfg
@@ -53,6 +56,7 @@ def set_enabled(name, enabled):
     except (OSError, ValueError):
         user = {}
     user.setdefault("providers", {}).setdefault(name, {})["enabled"] = bool(enabled)
+    os.makedirs(os.path.dirname(CONFIG), exist_ok=True)
     tmp = CONFIG + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(user, f, indent=2)
@@ -69,6 +73,8 @@ def enabled(name):
 def binary(name):
     """Path of the provider CLI, or None if it is not installed."""
     try:
+        if name == "fake":
+            return "<fake>"
         if name == "agy":
             from orch.adapters.agy import AGY
             return AGY if os.path.exists(AGY) else None
@@ -85,7 +91,7 @@ def binary(name):
 
 def adapter_importable(name):
     try:
-        mod = importlib.import_module(f"orch.adapters.{name}")
+        mod = importlib.import_module(ADAPTER_MODULE.get(name, f"orch.adapters.{name}"))
         return any(n.endswith("Adapter") for n in dir(mod))
     except Exception:
         return False
@@ -125,12 +131,18 @@ def _discover_codex(exe):
             for m in data.get("models", []) if m.get("slug") and m.get("visibility", "list") != "hide"], "live"
 
 
-DISCOVER = {"agy": _discover_agy, "opencode": _discover_opencode, "claude": _discover_claude, "codex": _discover_codex}
+def _discover_fake(exe):
+    return [{"id": "fake-1", "label": "scripted fake"}], "live"
+
+
+DISCOVER = {"fake": _discover_fake, "agy": _discover_agy, "opencode": _discover_opencode, "claude": _discover_claude, "codex": _discover_codex}
 
 
 def _check_auth(name, exe, n_models):
     """True / False / None (unknown). Best effort: never raises, never starts a model turn."""
     try:
+        if name == "fake":
+            return True
         if name == "claude":
             return bool(json.loads(_run([exe, "auth", "status"], 20) or "{}").get("loggedIn"))
         if name == "codex":
