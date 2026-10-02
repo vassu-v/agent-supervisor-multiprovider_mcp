@@ -59,6 +59,8 @@ def parse_script(text):
     return None
 
 
+_JSONL_LOCK = threading.Lock()   # module level: every adapter in this process shares it, so appends to one file never tear
+
 class FakeAdapter(Adapter):
     name = "fake"
     capabilities = dict(PROFILES["claude"])
@@ -79,7 +81,7 @@ class FakeAdapter(Adapter):
         self._worker = None
         self._turn_no = 0
         self._n = 0
-        self._inbox_lock = threading.Lock()
+        self._inbox_lock = _JSONL_LOCK
         self._vars = {}
 
     @property

@@ -41,6 +41,16 @@ class DashboardStatic(unittest.TestCase):
             self.assertNotIn(bad, low)
         self.assertIsNone(re.search(r"<[^>]+\son[a-z]+\s*=", low), "inline on* handler attribute")
 
+    def test_valid_document_head(self):
+        # a bad rename once produced <uiHead>, which browsers treat as an unknown element: viewport/meta/style then misbehave
+        self.assertNotIn("<uiHead", self.html)
+        self.assertNotIn("</uiHead", self.html)
+        self.assertEqual(self.html.count("<head>"), 1)
+        self.assertEqual(self.html.count("</head>"), 1)
+        head = self.html.split("<head>")[1].split("</head>")[0]
+        for needed in ('<meta charset="utf-8">', 'name="viewport"', "<title>", "<style>"):
+            self.assertIn(needed, head)
+
     def test_token_placeholder_once(self):
         self.assertEqual(self.html.count("__TOKEN__"), 1)
         self.assertIn('"Authorization":"Bearer "+TOKEN', self.html)

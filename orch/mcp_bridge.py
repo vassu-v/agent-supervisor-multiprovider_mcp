@@ -135,7 +135,8 @@ def hello():
         return False
     ST.session, ST.ws, ST.stale = r["session"], r.get("workspace"), False
     cli.SESSION_ID = ST.session
-    ST.me = f"session:{r.get('client')}/{r.get('label')}"
+    lbl = r.get("label")
+    ST.me = f"session:{r.get('client')}" + (f"/{lbl}" if lbl else "")   # must match identity.identity_string()
     if ST.ws and ST.ws not in ST.seen:
         prime(ST.ws)
     return True

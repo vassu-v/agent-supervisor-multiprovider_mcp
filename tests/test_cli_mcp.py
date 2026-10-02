@@ -224,6 +224,8 @@ class CliMcp(unittest.TestCase):
             # own posts do not count
             err, txt = b.tool("board_post", text="bridge says hi", kind="done", paths=["x/y"])
             self.assertFalse(err, txt)
+            # the notice is computed after the post itself: the client's own post must not count (sender format must match the daemon's)
+            self.assertNotIn("board:", txt, "own post counted in its own notice")
             err, txt = b.tool("workspace_info")
             self.assertFalse(err, txt)
             self.assertNotIn("board:", txt)

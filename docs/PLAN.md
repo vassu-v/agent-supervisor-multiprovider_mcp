@@ -235,7 +235,7 @@ All run against real CLIs on Windows 11 with the cheapest suitable models.
 - **Known weak spots:** admin-token holders can label themselves as any identity; agents on the same account can read `orch/token.txt`;
   the last-good-policy fallback and the 600 s escalation timeout have no automated test; MCP-session-labelled posts are lightly tested;
   Windows only.
-- **Cross-provider handoff**- **Cross-provider handoff** (one agent's result feeding another provider's agent) is not built.
+- **Cross-provider handoff** (one agent's result feeding another provider's agent) is not built.
 - **A clean live-vs-resume cost comparison** has not been run; only the cache numbers above exist.
 - **Dashboard** polls every 2s rather than using true server push; read-only API calls need no token (loopback only).
 - **agy interrupt** costs a restart. If agy ever exposes its internal cancel, switch the adapter to it.

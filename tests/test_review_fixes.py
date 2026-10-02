@@ -127,9 +127,10 @@ class Fixes(unittest.TestCase):
 
     # MED-4: a long reason or many paths cannot silence auto events
     def test_clamped_paths_and_long_reason_still_post(self):
-        st, r = api(self.d, "POST", "/api/declare", {"id": "h1-a", "paths": [f"p{i}/*" for i in range(11)]})
-        self.assertGreaterEqual(st, 400, "more than 10 paths is rejected up front")
-        self.idle("m4-v", [{"say": "v"}], "m4v")
+        self.idle("m4-v", [{"say": "v"}], "m4v")                  # the target must exist, or the call fails for another reason
+        st, r = api(self.d, "POST", "/api/declare", {"id": "m4-v", "paths": [f"p{i}/*" for i in range(11)]})
+        self.assertTrue(400 <= st < 500, r)
+        self.assertIn("paths", json.dumps(r), "more than 10 paths is rejected up front, and for that reason")
         api(self.d, "POST", "/api/stop", {"id": "m4-v", "reason": "r" * 900})
         self.assertTrue(wait_for(lambda: any(p.get("about") == "m4-v" and p.get("event") == "stopped" for p in self.board())),
                         "a very long stop reason must not suppress the stopped event")

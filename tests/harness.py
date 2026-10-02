@@ -140,16 +140,19 @@ def get_agent(daemon, aid):
     return api(daemon, "GET", f"/api/status?id={aid}")[1]
 
 
-def wait_status(daemon, aid, status, timeout=20):
-    """Poll /api/status until the agent's status equals `status` (str or collection of str). Returns the info dict;
-    raises AssertionError on timeout."""
+def wait_status(daemon, aid, status, timeout=20, min_turns=1):
+    """Poll /api/status until the agent's status equals `status` (str or collection of str). For 'idle' the agent must also have
+    finished at least `min_turns` turns with every turn answered and nothing queued, because an adapter reports a start-time
+    'idle' before its first turn is delivered. Returns the info dict; raises AssertionError on timeout."""
     want = {status} if isinstance(status, str) else set(status)
     deadline = time.time() + timeout
     info = None
     while time.time() < deadline:
         st, info = api(daemon, "GET", f"/api/status?id={aid}")
         if st == 200 and isinstance(info, dict) and (info.get("status") or info.get("state")) in want:
-            return info
+            if "idle" not in want or (info.get("turns", 0) >= min_turns and not info.get("queued")
+                                      and all("response" in t for t in info.get("turns_full", []))):
+                return info
         time.sleep(0.1)
     raise AssertionError(f"agent {aid} did not reach {sorted(want)} in {timeout}s; last={info}\n"
                          f"daemon log tail:\n{daemon.output()[-1500:]}")
