@@ -86,12 +86,18 @@ def api(path, body, query, who):
         s = o.sessions.hello(body.get("client") or "unknown", body.get("label"), ws, body.get("pid"))
         return {"session": s["id"], "workspace": ws, "client": s["client"], "label": s["label"]}
     if path == "/api/sessions":
-        return o.sessions.list_live()
+        live = o.sessions.list_live()
+        if is_agent:                              # agents see who is attached to their own workspace, never ids or pids
+            return [{"client": s["client"], "label": s.get("label")} for s in live if s.get("workspace") == _own_ws(who)]
+        return live
     if path == "/api/workspaces":
         return o.workspaces()
     if path == "/api/workspace":
         if body.get("path"):
-            return wsmod.resolve(body["path"])
+            r = wsmod.resolve(body["path"])
+            if is_agent and r["id"] != _own_ws(who):
+                raise PermissionError("agents may only resolve paths inside their own workspace")
+            return r
         ws = _own_ws(who) if is_agent else body.get("ws")
         return next((w for w in o.workspaces() if w["id"] == ws), None) or {"id": ws, "agents": 0}
     if path == "/api/declare":
@@ -156,7 +162,7 @@ def api(path, body, query, who):
         flt = str(body.get("filter") or "").lower()
         out = {}
         for n in names:
-            rec = providers.models(n, force=_bool(body.get("refresh", False)))
+            rec = providers.models(n, force=_bool(body.get("refresh", False)) and not is_agent)   # agents must not force CLI runs
             hit = [m for m in rec["models"] if flt in m["id"].lower()] if flt else rec["models"]
             out[n] = {"enabled": providers.enabled(n), "source": rec["source"], "error": rec["error"],
                       "total": len(rec["models"]), "matched": len(hit), "models": hit[:limit], "truncated": len(hit) > limit}

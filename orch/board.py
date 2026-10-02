@@ -40,12 +40,14 @@ _ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]"            # CSI
                    r"|\x1b[PX^_][^\x1b]*(?:\x1b\\)?"       # DCS/SOS/PM/APC
                    r"|\x1b[@-Z\\-_]"                       # 2-byte escapes
                    r"|\x9b[0-?]*[ -/]*[@-~]")              # 8-bit CSI
+_BRACKETS = {ord(c): "(" for c in "【〔〖⁅❲⟦⦋﹇⟬［"} | {ord(c): ")" for c in "】〕〗⁆❳⟧⦌﹈⟭］"}
 _FENCE = re.compile(r"(?:`{3,}|~{3,})[A-Za-z0-9_+.#-]*")
 # strings that imitate our own frames; each is rewritten so it can no longer be read as a frame marker
 _FRAMES = (
     (re.compile(r"\[\s*/?\s*(orchestrator|board)", re.I), r"(\1"),
     (re.compile(r"-{2,}\s*(task)\s*-{2,}", re.I), r"- \1 -"),
     (re.compile(r"<\s*/?\s*(announcement)", re.I), r"(\1"),
+    (re.compile(r"orchestrator\s+(decision|rules?|override|says)", re.I), r"orchestrator-quote \1"),
 )
 
 
@@ -58,6 +60,7 @@ def sanitize(text, max_raw=MAX_RAW):
     s = _ANSI.sub("", s)
     s = s.replace("\r\n", "\n").replace("\r", "\n").replace(" ", "\n").replace(" ", "\n")
     s = unicodedata.normalize("NFKC", s)      # fullwidth brackets etc. -> ASCII, so look-alikes are caught
+    s = s.translate(_BRACKETS)                # brackets NFKC leaves alone ([board imitations)
     s = _ANSI.sub("", s)
     out = []
     for ch in s:
