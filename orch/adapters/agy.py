@@ -38,6 +38,8 @@ class AgyAdapter(Adapter):
     def start(self):
         cmd = [AGY, "--input-format", "stream-json", "--output-format", "stream-json",
                "--model", self.model, "--dangerously-skip-permissions", "--print="]
+        if self.opts.get("effort"):                   # fixed at launch: a different effort means a new process (kept across interrupt restarts)
+            cmd += ["--effort", self.opts["effort"]]
         if self.agent:
             cmd += ["--agent", self.agent]
         if self.sandbox:

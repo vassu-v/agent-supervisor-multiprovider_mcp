@@ -25,6 +25,10 @@ READ_KINDS = POST_KINDS + ["question", "auto"]
 WSD = {**S, "description": "Workspace id (see workspace_info / sessions_list). Defaults to this client's workspace."}
 PATHS = {"type": "array", "items": S, "description": "Up to 10 file/dir globs. Advisory only: nothing locks files."}
 
+EFFORT_DOC = ("Reasoning effort: low|medium|high|xhigh|max. Mapped to the nearest level the provider/model supports; the reply "
+              "reports effort_applied (and effort_warning if it differs or is unsupported). Explicit provider+model+effort are always honoured; "
+              "with provider=auto the tier's candidate may supply a default effort. Fixed for the agent's lifetime. Omit for the provider default.")
+
 # name -> (description, properties, required, daemon path, fixed/derived-args hook)
 TOOLS = {
     "agent_spawn": (
@@ -40,6 +44,7 @@ TOOLS = {
          "provider": {**S, "description": "auto | agy | claude | opencode | codex. Must be currently available (see providers_list)."},
          "model": {**S, "description": "Exact model id from models_list (or an alias such as 'sonnet'). Omit to let routing choose."},
          "tier": {**S, "description": "Only used with provider=auto. " + TIERS},
+         "effort": {**S, "enum": ["low", "medium", "high", "xhigh", "max"], "description": EFFORT_DOC},
          "id": {**S, "description": "Optional name for the agent; generated if omitted."},
          "goal": {**S, "description": "One line (<=200 chars) saying what this agent is for; shown on the board and to peers."},
          "paths": {**PATHS, "description": "Files/dirs (globs) the agent will touch. Advisory, shown to peers."}},
@@ -71,7 +76,9 @@ TOOLS = {
                            "safe alternative. This is how a paused agent gets unblocked.",
                            {"escalation": S, "decision": {**S, "enum": ["allow", "deny"]}, "note": S}, ["escalation", "decision"], "/api/resolve"),
     "route_preview": ("Show which provider and model a task would be routed to (and why) without starting anything.",
-                      {"task": S, "tier": {**S, "description": TIERS}}, ["task"], "/api/route"),
+                      {"task": S, "tier": {**S, "description": TIERS}, "provider": S, "model": S,
+                       "effort": {**S, "enum": ["low", "medium", "high", "xhigh", "max"], "description": EFFORT_DOC}},
+                      ["task"], "/api/route"),
     "providers_list": ("Which providers are ready, switched off, not installed or need login. Small by default; "
                        "include_models=true embeds every model list (can be large).",
                        {"include_models": {"type": "boolean"}}, [], "/api/providers"),

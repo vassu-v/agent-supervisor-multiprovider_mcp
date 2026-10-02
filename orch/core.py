@@ -102,10 +102,27 @@ def _hash(path):
         return None
 
 
-class Policy:
-    """Decisions: routing (which provider/model) and guard (pass / escalate / block)."""
+def parse_candidate(c):
+    """'provider:pattern[@effort]' -> (provider, pattern, effort|None). Raises ValueError on an invalid effort."""
+    prov, _, rest = c.partition(":")
+    pat, at, eff = rest.rpartition("@")
+    if not at:
+        return prov, rest, None
+    return prov, pat, providers.check_effort(eff)
 
-    def route(self, task, tier=None, provider=None, model=None, available=None):
+
+class Policy:
+    """Decisions: routing (which provider/model/effort) and guard (pass / escalate / block)."""
+
+    def route(self, task, tier=None, provider=None, model=None, available=None, effort=None):
+        """Pick provider, model and reasoning effort.
+
+        RULE: an explicit `provider` (with its `model` and `effort`) is ALWAYS honoured exactly and never rerouted;
+        only `provider='auto'` (or no provider) lets routing choose, and then a tier candidate such as
+        `claude:opus@high` supplies the effort unless the caller passed an explicit `effort`, which wins.
+        The result carries `effort` (requested), `effort_applied` (provider-native value after mapping) and
+        `effort_warning` (why they differ / why it cannot be applied)."""
+        effort = providers.check_effort(effort)
         p = load_policy()["routing"]
         reasons = []
         text = (task or "").lower()
@@ -129,10 +146,15 @@ class Policy:
                 ok, close = providers.validate_model(provider, model)
                 if not ok:
                     raise ValueError(f"model {model!r} is not offered by {provider}. Some that are: {close}")
-            return {"provider": provider, "model": model, "tier": tier, "reasons": reasons or ["explicit"], "review": review}
+            return {"provider": provider, "model": model, "tier": tier, "reasons": reasons or ["explicit"], "review": review,
+                    **{"model": model, **self._effort(provider, model, effort)}}
         skipped = []
         for c in p["tiers"][tier]["candidates"]:
-            prov, _, pat = c.partition(":")
+            try:
+                prov, pat, ceff = parse_candidate(c)
+            except ValueError as e:
+                skipped.append(f"{c}: {e}")
+                continue
             if prov not in usable:
                 skipped.append(f"{c}: provider unavailable")
                 continue
@@ -140,10 +162,21 @@ class Policy:
             if pat and pat != "default" and mod is None:
                 skipped.append(f"{c}: no matching model")
                 continue
-            return {"provider": prov, "model": None if mod == "default" else mod, "tier": tier,
-                    "reasons": reasons + [f"tier {tier} -> {prov}:{mod or 'default'}"] + ([f"skipped {s}" for s in skipped] if skipped else []),
-                    "review": review}
+            mdl = None if mod == "default" else mod
+            eff = effort or ceff
+            return {"provider": prov, "tier": tier,
+                    "reasons": reasons + [f"tier {tier} -> {prov}:{mod or 'default'}" + (f" effort {eff}" if eff else "")]
+                    + ([f"skipped {s}" for s in skipped] if skipped else []),
+                    "review": review, **{"model": mdl, **self._effort(prov, mdl, eff)}}
         raise ValueError(f"no available provider/model for tier {tier}. Skipped: {skipped}. Usable providers: {usable or 'none'}")
+
+    @staticmethod
+    def _effort(provider, model, effort):
+        m = providers.map_effort(provider, model, effort)
+        out = {"effort": m["effort"], "effort_applied": m["applied"], "effort_warning": m["warning"]}
+        if m.get("via_model"):
+            out["model"], out["effort_via_model"] = m["model"], True       # the model id carries the effort (agy)
+        return out
 
     def guard(self, cwd, tool, inp):
         """-> ("pass"|"escalate"|"block", reason). Callers treat an exception as escalate (fail closed)."""
@@ -182,6 +215,7 @@ class AgentRec:
     def __init__(self, aid, provider, model, cwd, tier, owner, review):
         self.id, self.provider, self.model, self.cwd = aid, provider, model, cwd
         self.tier, self.owner, self.review = tier, owner, review
+        self.effort = self.effort_applied = self.effort_warning = None
         self.status = "starting"
         self.turns, self.queue = [], []
         self.events = collections.deque(maxlen=3000)
@@ -210,6 +244,7 @@ class AgentRec:
              "stopped_by": self.stopped_by, "age_s": round(now() - self.created),
              "parent": self.parent, "workspace": self.ws, "workspace_name": self.ws_name, "subdir": self.subdir,
              "goal": self.goal, "paths": self.paths, "created": self.created,
+             "effort": self.effort, "effort_applied": self.effort_applied, "effort_warning": self.effort_warning,
              "last_text": (last.get("response") or last.get("partial") or "")[-300:]}
         if full:
             d["turns_full"] = self.turns
@@ -279,7 +314,8 @@ class Orchestrator:
         return goal, paths
 
     def spawn(self, task, cwd, provider="auto", model=None, tier=None, aid=None, owner="external", opts=None,
-              goal=None, paths=None, parent=None, session=None):
+              goal=None, paths=None, parent=None, session=None, effort=None):
+        effort = providers.check_effort(effort)       # validate before anything is created
         if not task or not str(task).strip():
             raise ValueError("task is required")
         if aid is not None and not re.fullmatch(r"[A-Za-z0-9_-]{1,32}", str(aid)):
@@ -307,7 +343,7 @@ class Orchestrator:
             cap = providers.load_config()["max_concurrent"]
             if busy >= cap:
                 raise RuntimeError(f"concurrency cap {cap} reached (raise max_concurrent in orch/config.json)")
-            route = self.policy.route(task, tier, provider, model, self.available())
+            route = self.policy.route(task, tier, provider, model, self.available(), effort=effort)
             aid = aid or "a" + uuid.uuid4().hex[:5]
             if aid in self.agents or self.store.get_agent_meta(aid):   # ids are never reused, not even after a daemon restart: logs, board history and parent links stay unambiguous
                 raise ValueError(f"agent id {aid} was already used; pick another")
@@ -315,6 +351,7 @@ class Orchestrator:
             rec = AgentRec(aid, route["provider"], route["model"], cwd, route["tier"], owner, route.get("review"))
             rec.parent, rec.ws, rec.ws_name, rec.ws_root, rec.subdir = parent or None, ws["id"], ws["name"], ws["root"], ws["subdir"]
             rec.goal, rec.paths, rec.session = goal or "", paths or [], session
+            rec.effort, rec.effort_applied, rec.effort_warning = route.get("effort"), route.get("effort_applied"), route.get("effort_warning")
             self.agents[aid] = rec
         notes = load_policy()["shared_notes_file"]
         np = os.path.join(cwd, notes)
@@ -327,7 +364,8 @@ class Orchestrator:
                 self._dir_snap[key] = {fn: (_hash(os.path.join(cwd, fn)), self._read(os.path.join(cwd, fn)))
                                        for fn in load_policy()["mirror_files"]}
         self._audit("spawn", agent=aid, provider=rec.provider, model=rec.model, cwd=cwd, tier=rec.tier,
-                    reasons=route["reasons"], owner=owner, parent=parent, workspace=rec.ws, goal=rec.goal, paths=rec.paths)
+                    reasons=route["reasons"], owner=owner, parent=parent, workspace=rec.ws, goal=rec.goal, paths=rec.paths,
+                    effort=rec.effort, effort_applied=rec.effort_applied)
         try:
             self.board.register_agent(aid, owner=owner, client=owner, parent=parent, ws=ws["id"], cwd=cwd, goal=rec.goal,
                                       paths=rec.paths, created=rec.created)
@@ -336,6 +374,9 @@ class Orchestrator:
             self._audit("board_error", agent=aid, error=repr(e))
         tok = self.tokens.mint(aid)               # this agent's own credential: limited scope, revoked when it ends
         opts = dict(opts or {})
+        opts.pop("effort", None)                  # only the validated, mapped value from routing may reach an adapter
+        if rec.effort_applied and not route.get("effort_via_model"):
+            opts["effort"] = rec.effort_applied
         opts["env"] = {**(opts.get("env") or {}), "ORCH_URL": self.url, "ORCH_TOKEN": tok, "ORCH_AGENT": aid,
                        "ORCH_WORKSPACE": ws["id"], "ORCH_PARENT": parent or ""}
         try:

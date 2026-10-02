@@ -1,6 +1,6 @@
 """CLI client for the orchestrator.  py -3.10 agentctl.py <cmd> ...
   serve                                   start the daemon (run as a background task)
-  spawn "<task>" --cwd DIR [--provider agy|claude|codex|opencode|auto] [--model M] [--tier T] [--id ID] [--sandbox]
+  spawn "<task>" --cwd DIR [--provider agy|claude|codex|opencode|auto] [--model M] [--tier T] [--effort low|medium|high|xhigh|max] [--id ID] [--sandbox]
   list | status ID | tail ID [N] | result ID | events ID [SINCE]
   send ID "<msg>" [--mode queue|steer|interrupt]      interrupt ID
   stop ID --reason "<why>"                            escalations | resolve EID allow|deny [--note ".."] | audit | route "<task>"
@@ -149,7 +149,9 @@ def fmt_list(rows, tree):
 
 def run(cmd, pos, kw):
     if cmd == "spawn":
-        need(pos, 1, 'spawn "<task>" --cwd DIR [--provider P] [--model M] [--tier T] [--id ID] [--goal TEXT] [--paths a,b]')
+        need(pos, 1, 'spawn "<task>" --cwd DIR [--provider P] [--model M] [--tier T] [--effort low|medium|high|xhigh|max] [--id ID] [--goal TEXT] [--paths a,b]')
+        if kw.get("effort") is True:
+            raise CliError("--effort needs a value: low|medium|high|xhigh|max")
         opts = {"sandbox": True} if kw.pop("sandbox", None) else None
         if "paths" in kw:
             kw["paths"] = csv(kw["paths"])

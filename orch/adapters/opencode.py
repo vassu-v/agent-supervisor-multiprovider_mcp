@@ -156,6 +156,8 @@ class OpenCodeAdapter(Adapter):
         if self.model and "/" in self.model:
             p, m = self.model.split("/", 1)
             body["model"] = {"providerID": p, "modelID": m}
+        if self.opts.get("effort"):                   # per-message: verified field `variant` in the prompt_async OpenAPI schema; no new session needed
+            body["variant"] = self.opts["effort"]
         try:
             self._req("POST", "/session/%s/prompt_async" % self.session_id, body)
         except Exception as e:

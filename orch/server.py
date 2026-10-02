@@ -68,7 +68,8 @@ def api(path, body, query, who):
         parent = who["aid"] if is_agent else (body.get("parent") or None)
         return o.spawn(body["task"], body["cwd"], body.get("provider", "auto"), body.get("model"), body.get("tier"),
                        body.get("id"), by, None if is_agent else body.get("opts"), goal=body.get("goal"),
-                       paths=body.get("paths"), parent=parent, session=who.get("session_id"))
+                       paths=body.get("paths"), parent=parent, session=who.get("session_id"),
+                       effort=body.get("effort"))
     if path == "/api/send":
         return o.send(body["id"], body["msg"], body.get("mode", "queue"), by)
     if path == "/api/interrupt":
@@ -131,7 +132,8 @@ def api(path, body, query, who):
     if path == "/api/resolve":
         return o.resolve(body["escalation"], body["decision"], body.get("note", ""), by)
     if path == "/api/route":
-        return o.policy.route(body["task"], body.get("tier"), body.get("provider"), body.get("model"), o.available())
+        return o.policy.route(body["task"], body.get("tier"), body.get("provider"), body.get("model"), o.available(),
+                              effort=body.get("effort"))
     if path == "/api/list":
         ws = _own_ws(who) if is_agent else (None if _bool(body.get("all", False)) else (body.get("ws") or None))
         return o.list(ws=ws, tree=_bool(body.get("tree", False)))

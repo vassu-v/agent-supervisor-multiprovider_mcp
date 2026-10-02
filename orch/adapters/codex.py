@@ -250,6 +250,12 @@ class CodexAdapter(Adapter):
     def _input(text):
         return [{"type": "text", "text": text}]
 
+    def _turn_params(self, text):
+        params = {"threadId": self.session_id, "input": self._input(text)}
+        if self.opts.get("effort"):                   # per-turn field (also applies to later turns); no new thread needed
+            params["effort"] = self.opts["effort"]
+        return params
+
     def _start_turn(self, text):
         with self._lock:
             self._busy = True
@@ -257,7 +263,7 @@ class CodexAdapter(Adapter):
             self._text = []
         self.emit({"type": "status", "state": "busy"})
         try:
-            r = self._request("turn/start", {"threadId": self.session_id, "input": self._input(text)})
+            r = self._request("turn/start", self._turn_params(text))
             with self._lock:
                 tid = (r.get("turn") or {}).get("id")
                 if tid and self._busy:

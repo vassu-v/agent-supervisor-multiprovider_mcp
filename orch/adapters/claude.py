@@ -40,6 +40,8 @@ class ClaudeAdapter(Adapter):
         exe = self.opts.get("command") or shutil.which("claude") or "claude"
         cmd = [exe, "-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
                "--include-partial-messages", "--permission-mode", "bypassPermissions", "--model", self.model]
+        if self.opts.get("effort"):                   # fixed at launch: a different effort means a new process (it is kept across restarts/--resume)
+            cmd += ["--effort", self.opts["effort"]]
         if self.session_id:
             cmd += ["--resume", self.session_id]
         env = self._child_env()

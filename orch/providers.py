@@ -24,6 +24,95 @@ CACHE = {}          # provider -> {"models": [...], "source": "live|static|none"
 _REFRESHING = set()
 
 
+# ------------------------------------------------------------------ reasoning effort
+# Unified effort value space, low to high. Each provider maps it onto what it really supports (nearest level, ties go
+# DOWN); the result is reported as `effort_applied` (+ `effort_warning` when it differs or cannot be applied).
+#   claude   : `--effort <level>` at launch. Native levels low|medium|high|xhigh|max -> identity.
+#   agy      : effort is part of the MODEL ID (gemini-3.8-flash-low|medium|high): effort picks the sibling id. agy rejects
+#              `--effort` for every model (verified), so the flag is never passed; models without a level have no effort.
+#   codex    : turn/start `effort` (ReasoningEffort string). Levels are per model (debug models: supported_reasoning_levels,
+#              e.g. gpt-5.5 = low..xhigh, gpt-5.6-luna = low..max); unified value -> nearest level the model supports.
+#   opencode : `variant` on prompt_async; provider-specific (openai/*: low|medium|high|xhigh; anthropic/*: high|max;
+#              google/*: low|high; other: low|medium|high). Unified value -> nearest variant for the model's provider.
+EFFORTS = ("low", "medium", "high", "xhigh", "max")
+_STD = list(EFFORTS)
+EFFORT_STATIC = {"claude": _STD, "agy": _STD, "fake": _STD, "codex": ["low", "medium", "high", "xhigh"]}   # codex: fallback when the model is unknown
+OPENCODE_VARIANTS = {"openai": ["low", "medium", "high", "xhigh"], "anthropic": ["high", "max"],
+                     "google": ["low", "high"]}
+OPENCODE_DEFAULT = ["low", "medium", "high"]
+_AGY_SUFFIX = ("low", "medium", "high")
+
+
+def check_effort(effort):
+    """Normalise + validate a unified effort value. None/'' -> None. Raises ValueError otherwise."""
+    if effort is None or effort == "":
+        return None
+    if not isinstance(effort, str) or effort.strip().lower() not in EFFORTS:
+        raise ValueError(f"effort {effort!r} is invalid; valid values: {list(EFFORTS)}")
+    return effort.strip().lower()
+
+
+def nearest_level(effort, supported):
+    """Nearest of `supported` to `effort` on the unified scale; ties go to the lower level."""
+    r = EFFORTS.index(effort)
+    best = min(supported, key=lambda x: (abs(EFFORTS.index(x) - r) if x in EFFORTS else 99, EFFORTS.index(x) if x in EFFORTS else 99))
+    return best
+
+
+def opencode_levels(model):
+    return OPENCODE_VARIANTS.get((model or "").split("/", 1)[0].lower(), OPENCODE_DEFAULT) if model and "/" in model else OPENCODE_DEFAULT
+
+
+def _model_efforts(provider, model_id):
+    """Levels a provider/model accepts (from the discovered list when known, else the static table)."""
+    if provider == "opencode":
+        return opencode_levels(model_id)
+    if provider == "codex" and model_id and model_id != "default":
+        for m in (CACHE.get("codex") or {}).get("models", []):
+            if m["id"] == model_id and m.get("efforts"):
+                return list(m["efforts"])
+    return list(EFFORT_STATIC.get(provider) or [])
+
+
+def supported_efforts(provider, model=None):
+    return _model_efforts(provider, model)
+
+
+def map_effort(provider, model, effort):
+    """-> {"effort": requested, "applied": provider value | None, "warning": str | None}. Never silent: a changed or
+    impossible mapping is explained in `warning`. Raises ValueError for an invalid effort value."""
+    effort = check_effort(effort)
+    if effort is None:
+        return {"effort": None, "applied": None, "warning": None}
+    if provider == "agy" and model and model.rsplit("-", 1)[-1] in _AGY_SUFFIX:
+        # agy rejects `--effort` together with a model id that already carries a level (verified: "conflicts with --effort").
+        # For those models effort is chosen by picking the sibling id: gemini-3.8-flash-low / -medium / -high.
+        base = model.rsplit("-", 1)[0]
+        ids = {m["id"] for m in models("agy")["models"]}
+        have = [lv for lv in ("low", "medium", "high") if f"{base}-{lv}" in ids] or [model.rsplit("-", 1)[-1]]
+        applied = effort if effort in have else nearest_level(effort, have)
+        warn = None if applied == effort else (f"agy encodes effort in the model id and offers {have} for {base}; "
+                                               f"using {applied!r} for requested {effort!r}")
+        return {"effort": effort, "applied": applied, "warning": warn, "model": f"{base}-{applied}", "via_model": True}
+    if provider == "agy":
+        # verified live: agy rejects --effort for EVERY model ("--effort is not supported for model ..."), so a model id without a
+        # level suffix has no effort control at all; never pass the flag.
+        return {"effort": effort, "applied": None,
+                "warning": (f"agy takes reasoning effort only through the level in a gemini model id (-low/-medium/-high); "
+                            f"{model or 'the default model'} has none, so {effort!r} was ignored")}
+    if provider == "codex" and model and model != "default":
+        models(provider)                        # make sure per-model levels are known (cached, no tokens)
+    sup = _model_efforts(provider, model)
+    if not sup:
+        return {"effort": effort, "applied": None,
+                "warning": f"provider {provider} does not support reasoning effort; {effort!r} was ignored"}
+    applied = effort if effort in sup else nearest_level(effort, sup)
+    warn = None
+    if applied != effort:
+        warn = f"{provider}{':' + model if model else ''} does not offer effort {effort!r} (offers {sup}); using nearest {applied!r}"
+    return {"effort": effort, "applied": applied, "warning": warn}
+
+
 # ------------------------------------------------------------------ config
 def load_config():
     cfg = {"providers": {n: {"enabled": True} for n in NAMES}, "model_cache_ttl_s": 600, "max_concurrent": 20}
@@ -110,29 +199,43 @@ def _discover_agy(exe):
         parts = line.rstrip().split("\t")
         if parts and parts[0].strip():
             models.append({"id": parts[0].strip(), "label": parts[1].strip() if len(parts) > 1 else parts[0].strip()})
+    ids = {m["id"] for m in models}
+    for m in models:                              # effort levels exist only where a gemini id has level siblings
+        suffix = m["id"].rsplit("-", 1)[-1]
+        base = m["id"].rsplit("-", 1)[0]
+        m["efforts"] = [lv for lv in ("low", "medium", "high") if f"{base}-{lv}" in ids] if suffix in _AGY_SUFFIX else []
     return models, "live"
 
 
 def _discover_opencode(exe):
     out = _run([exe, "models"])
-    return [{"id": l.strip(), "label": l.strip()} for l in out.splitlines() if "/" in l and " " not in l.strip()], "live"
+    return [{"id": l.strip(), "label": l.strip(), "efforts": opencode_levels(l.strip())}
+            for l in out.splitlines() if "/" in l and " " not in l.strip()], "live"
 
 
 def _discover_claude(exe):
     # Claude Code has no model-list command; these aliases are accepted by `--model` and always track the latest model.
     aliases = ["opus", "sonnet", "haiku"]
     extra = load_config()["providers"].get("claude", {}).get("extra_models", [])
-    return [{"id": a, "label": f"{a} (alias)"} for a in aliases + list(extra)], "static"
+    return [{"id": a, "label": f"{a} (alias)", "efforts": list(EFFORT_STATIC["claude"])} for a in aliases + list(extra)], "static"
 
 
 def _discover_codex(exe):
     data = json.loads(_run([exe, "debug", "models"]))          # lists models; consumes no tokens
-    return [{"id": m["slug"], "label": m.get("display_name") or m["slug"]}
+    return [{"id": m["slug"], "label": m.get("display_name") or m["slug"], "efforts": _codex_levels(m),
+             "default_effort": m.get("default_reasoning_level")}
             for m in data.get("models", []) if m.get("slug") and m.get("visibility", "list") != "hide"], "live"
 
 
+def _codex_levels(m):
+    """Unified-scale levels from supported_reasoning_levels (codex-only extras such as 'ultra' are not part of the unified space)."""
+    lv = [x.get("effort") if isinstance(x, dict) else x for x in (m.get("supported_reasoning_levels") or [])]
+    lv = [x for x in lv if x in EFFORTS]
+    return lv or list(EFFORT_STATIC["codex"])
+
+
 def _discover_fake(exe):
-    return [{"id": "fake-1", "label": "scripted fake"}], "live"
+    return [{"id": "fake-1", "label": "scripted fake", "efforts": list(EFFORT_STATIC["fake"])}], "live"
 
 
 DISCOVER = {"fake": _discover_fake, "agy": _discover_agy, "opencode": _discover_opencode, "claude": _discover_claude, "codex": _discover_codex}

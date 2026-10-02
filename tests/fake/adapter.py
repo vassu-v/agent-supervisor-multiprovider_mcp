@@ -10,7 +10,7 @@ preamble), or in opts["script"] (used for the first turn when the text carries n
                                                              "${name.key.sub}" in later path/body strings is replaced
   {"crash": true}                                            process "dies": error + result(error) + status dead
   {"random_walk": {"seed": n, "steps": k}}                   seeded random writes / announcements / say
-opts: script, default_script (turns with no script, default [{"say":"ack"}]), env, profile ("claude"|"agy"),
+opts: effort (already-mapped; recorded as "effort" in the inbox lines), script, default_script (turns with no script, default [{"say":"ack"}]), env, profile ("claude"|"agy"),
       capabilities (dict override), step_delay (seconds between steps, default 0).
 Every received message is appended to <cwd>/.fake_inbox.jsonl; http responses to <cwd>/.fake_http.jsonl.
 """
@@ -153,7 +153,10 @@ class FakeAdapter(Adapter):
             pass
 
     def _record(self, text, mode):
-        self._jsonl(".fake_inbox.jsonl", {"ts": time.time(), "agent": self.agent_id, "mode": mode, "text": text})
+        rec = {"ts": time.time(), "agent": self.agent_id, "mode": mode, "text": text}
+        if self.opts.get("effort"):
+            rec["effort"] = self.opts["effort"]
+        self._jsonl(".fake_inbox.jsonl", rec)
 
     # --- worker ---------------------------------------------------------
     def _loop(self):
