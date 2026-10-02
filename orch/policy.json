@@ -1,0 +1,135 @@
+{
+  "_doc": "Routing + escalation policy. Edit freely; the daemon reloads it on every decision.",
+  "routing": {
+    "_doc": "Candidates are 'provider:pattern', tried in order. The pattern is a glob matched against the models the provider CLI actually reports (newest version wins), or an alias such as 'sonnet'. A candidate is skipped if its provider is switched off / not installed or nothing matches, so nothing here is a hardcoded model name.",
+    "default_tier": "standard",
+    "tiers": {
+      "trivial": {
+        "candidates": [
+          "agy:*flash*low"
+        ],
+        "note": "near-zero-intelligence chores only"
+      },
+      "bulk": {
+        "candidates": [
+          "agy:*flash*medium",
+          "opencode:opencode/*free*",
+          "claude:haiku"
+        ]
+      },
+      "standard": {
+        "candidates": [
+          "agy:*flash*high",
+          "agy:*pro*low",
+          "claude:sonnet",
+          "opencode:*large*"
+        ]
+      },
+      "hard": {
+        "candidates": [
+          "claude:opus",
+          "claude:sonnet",
+          "agy:*pro*high",
+          "codex:*"
+        ],
+        "review": true
+      },
+      "review": {
+        "candidates": [
+          "claude:sonnet",
+          "agy:*pro*high",
+          "codex:*"
+        ]
+      }
+    },
+    "bump_to_hard_keywords": [
+      "auth",
+      "authentication",
+      "authorization",
+      "oauth",
+      "password",
+      "passwords",
+      "secret",
+      "secrets",
+      "token",
+      "tokens",
+      "payment",
+      "payments",
+      "billing",
+      "migration",
+      "production",
+      "prod",
+      "delete",
+      "drop table",
+      "security",
+      "encrypt",
+      "encryption",
+      "deploy",
+      "credential",
+      "credentials"
+    ]
+  },
+  "guard": {
+    "_doc": "Evaluated on every tool_start/permission event. block = stop the agent now. escalate = interrupt (or stop) and ask the orchestrator/human. Detect-and-react (not a sandbox): use sandbox=true for hard isolation.",
+    "block_patterns": [
+      "\\brm\\s+-[a-z]*[rf][a-z]*\\s+(/|~|[A-Za-z]:[\\\\/]?)(\\s|$|[;&|*])",
+      "Remove-Item\\b.{0,200}-Recurse.{0,200}\\s[A-Za-z]:[\\\\/]?(\\s|$)",
+      "\\bformat(\\.com)?\\s+[A-Za-z]:(\\s|$)",
+      "\\bdiskpart\\b",
+      "\\breg(\\.exe)?\\s+delete\\s+HK",
+      "(^|[;&|]\\s*)shutdown(\\.exe)?\\s+(/[srpg]|-[hrsp]|now)\\b",
+      "\\b(Stop|Restart)-Computer\\b",
+      "\\bmkfs\\.",
+      "\\bdd\\s+if=\\S+\\s+of=/dev/",
+      "\\bcurl\\b.{0,300}(?:-d|--data\\w*|-F|--form|--upload-file|-T)\\s*@?\\S*(?:\\.env|id_rsa|\\.ssh|credentials|auth\\.json)",
+      "(?:Invoke-WebRequest|Invoke-RestMethod|\\biwr\\b|\\birm\\b).{0,300}(?:\\.env|id_rsa|\\.ssh|auth\\.json)"
+    ],
+    "escalate_patterns": [
+      "\\bgit\\b.{0,60}\\bpush\\b",
+      "\\bgit\\b.{0,60}\\bremote\\s+(add|set-url)",
+      "\\bgit\\b.{0,60}\\breset\\s+--hard",
+      "\\bgit\\b.{0,60}\\bclean\\s+-\\w*f",
+      "\\bgit\\b.{0,60}\\bconfig\\s+--global",
+      "\\bnpm\\s+(i|install)\\b.{0,40}(-g|--global)",
+      "\\bpip\\d*\\s+install\\b.{0,80}--user",
+      "\\bwinget\\s+install",
+      "\\bchoco\\s+install",
+      "\\b(curl|wget|Invoke-WebRequest|iwr|Invoke-RestMethod|irm)\\b.{0,300}(?:-X\\s*(?:POST|PUT|DELETE|PATCH)|--request\\s*(?:POST|PUT|DELETE|PATCH)|--data|-d\\s|-Method\\s+(?:Post|Put|Delete|Patch)|-Body)",
+      "(^|[;&|]\\s*|\\bsudo\\s+)(aws|gcloud|az|kubectl|terraform|vercel|netlify|flyctl|heroku)\\s",
+      "(^|[\\s/\\\\\\\"'=])\\.env(\\.[A-Za-z]+)?(?=$|[\\s\\\"'])",
+      "id_rsa",
+      "[\\\\/]\\.ssh[\\\\/]",
+      "\\.github[\\\\/]workflows",
+      "\\borch[\\\\/](policy\\.json|token\\.txt|config\\.json)",
+      "Remove-Item\\b.{0,200}-Recurse",
+      "\\brm\\s+-[a-z]*r",
+      "\\bdel\\s+/[sS]",
+      "\\brmdir\\s+/[sS]",
+      "\\btaskkill\\b",
+      "\\bStop-Process\\b",
+      "\\bsudo\\b",
+      "\\bsetx\\b",
+      "\\breg(\\.exe)?\\s+add"
+    ],
+    "outside_cwd": "escalate"
+  },
+  "stop_authority": {
+    "any_agent_may_stop": true,
+    "require_reason": true,
+    "note": "Any agent (or the orchestrator) may stop another agent that is doing something harmful; every stop is logged with who/why and visible on the dashboard."
+  },
+  "escalation": {
+    "target": "orchestrator",
+    "on_escalate": "interrupt",
+    "pending_timeout_s": 600,
+    "timeout_action": "stop"
+  },
+  "mirror_files": [
+    "CLAUDE.md",
+    "GEMINI.md",
+    "QWEN.md",
+    ".cursorrules",
+    "copilot-instructions.md"
+  ],
+  "shared_notes_file": "AGENTS.md"
+}

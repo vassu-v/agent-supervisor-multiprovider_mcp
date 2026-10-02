@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" role="img" aria-labelledby="t d">
+  <title id="t">Switchyard</title>
+  <desc id="d">One task enters a switchyard and is routed onto four provider tracks: agy, Claude Code, OpenCode and Codex.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1020"/><stop offset="1" stop-color="#151d36"/>
+    </linearGradient>
+    <pattern id="ties" width="14" height="14" patternUnits="userSpaceOnUse">
+      <rect x="0" y="5" width="3" height="4" fill="#26324f"/>
+    </pattern>
+  </defs>
+  <rect width="960" height="300" rx="18" fill="url(#bg)"/>
+  <rect width="960" height="300" rx="18" fill="none" stroke="#26324f"/>
+
+  <!-- title block -->
+  <text x="44" y="96" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="58" font-weight="700" fill="#f3f5fb" letter-spacing="1">Switchyard</text>
+  <text x="46" y="132" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="19" fill="#9fb0d6">One daemon to run, watch, steer and stop</text>
+  <text x="46" y="158" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="19" fill="#9fb0d6">coding agents from any provider.</text>
+
+  <g font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">
+    <rect x="46" y="190" width="106" height="26" rx="13" fill="#1d2744"/><text x="99" y="207" fill="#8fb4ff" text-anchor="middle">persistent sessions</text>
+    <rect x="160" y="190" width="104" height="26" rx="13" fill="#1d2744"/><text x="212" y="207" fill="#8fb4ff" text-anchor="middle">live steering</text>
+    <rect x="272" y="190" width="118" height="26" rx="13" fill="#1d2744"/><text x="331" y="207" fill="#8fb4ff" text-anchor="middle">guarded by policy</text>
+    <rect x="46" y="226" width="150" height="26" rx="13" fill="#1d2744"/><text x="121" y="243" fill="#8fb4ff" text-anchor="middle">models found live</text>
+    <rect x="204" y="226" width="124" height="26" rx="13" fill="#1d2744"/><text x="266" y="243" fill="#8fb4ff" text-anchor="middle">stdlib-only Python</text>
+  </g>
+
+  <!-- tracks: one input fans out to four providers through switch points -->
+  <g fill="none" stroke-linecap="round">
+    <g stroke="#26324f" stroke-width="12">
+      <path d="M470 150 H560"/>
+      <path d="M560 150 C610 150 612 64 668 64 H840"/>
+      <path d="M560 150 C610 150 612 118 668 118 H840"/>
+      <path d="M560 150 C610 150 612 182 668 182 H840"/>
+      <path d="M560 150 C610 150 612 236 668 236 H840"/>
+    </g>
+    <g stroke="url(#ties)" stroke-width="12" opacity="0.9">
+      <path d="M470 150 H560"/>
+      <path d="M560 150 C610 150 612 64 668 64 H840"/>
+      <path d="M560 150 C610 150 612 118 668 118 H840"/>
+      <path d="M560 150 C610 150 612 182 668 182 H840"/>
+      <path d="M560 150 C610 150 612 236 668 236 H840"/>
+    </g>
+    <g stroke="#6b7fb3" stroke-width="2">
+      <path d="M470 144 H560"/><path d="M470 156 H560"/>
+    </g>
+    <path d="M560 150 C610 150 612 118 668 118 H840" stroke="#f59e0b" stroke-width="3" stroke-dasharray="2 9"/>
+  </g>
+
+  <!-- incoming task -->
+  <g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+    <rect x="404" y="134" width="66" height="32" rx="8" fill="#f59e0b"/>
+    <text x="437" y="155" font-size="13" font-weight="700" fill="#1b1303" text-anchor="middle">task</text>
+  </g>
+  <circle cx="560" cy="150" r="9" fill="#0b1020" stroke="#f59e0b" stroke-width="3"/>
+
+  <!-- provider stops -->
+  <g font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15" font-weight="600">
+    <circle cx="852" cy="64" r="9" fill="#4ade80"/><text x="872" y="69" fill="#e6ebf8">agy</text>
+    <circle cx="852" cy="118" r="9" fill="#fb923c"/><text x="872" y="123" fill="#e6ebf8">claude</text>
+    <circle cx="852" cy="182" r="9" fill="#60a5fa"/><text x="872" y="187" fill="#e6ebf8">opencode</text>
+    <circle cx="852" cy="236" r="9" fill="#c084fc"/><text x="872" y="241" fill="#e6ebf8">codex</text>
+  </g>
+</svg>

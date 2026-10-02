@@ -1,0 +1,267 @@
+"""HTTP API + live dashboard for the orchestrator. Loopback only. Every call except /api/health needs the bearer token, and
+the Host/Origin headers must be the loopback address (defeats DNS rebinding and cross-site requests)."""
+import hmac
+import json
+import os
+import secrets
+import sys
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, urlparse
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from orch import providers  # noqa: E402
+from orch.core import HERE, Orchestrator  # noqa: E402
+
+PORT = int(os.environ.get("ORCH_PORT", "8765"))
+TOKEN_FILE = os.path.join(HERE, "orch", "token.txt")
+ORCH = Orchestrator()
+
+
+def token():
+    t = ""
+    try:
+        t = open(TOKEN_FILE).read().strip()
+    except OSError:
+        pass
+    if len(t) < 16:                        # missing or empty token file: generate a fresh one
+        t = secrets.token_hex(24)
+        with open(TOKEN_FILE, "w") as f:
+            f.write(t)
+        try:
+            os.chmod(TOKEN_FILE, 0o600)
+        except OSError:
+            pass
+    return t
+
+
+TOKEN = token()
+
+
+def _int(v, name):
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        raise ValueError(f"{name} must be an integer")
+
+
+def _bool(v):
+    return v if isinstance(v, bool) else str(v).lower() in ("1", "true", "yes", "on")
+
+
+def api(path, body, query):
+    o = ORCH
+    by = body.get("by", "external")
+    if path == "/api/spawn":
+        return o.spawn(body["task"], body["cwd"], body.get("provider", "auto"), body.get("model"), body.get("tier"),
+                       body.get("id"), body.get("owner", by), body.get("opts"))
+    if path == "/api/send":
+        return o.send(body["id"], body["msg"], body.get("mode", "queue"), by)
+    if path == "/api/interrupt":
+        return o.interrupt(body["id"], by)
+    if path == "/api/stop":
+        return o.stop(body["id"], by, body.get("reason", ""))
+    if path == "/api/resolve":
+        return o.resolve(body["escalation"], body["decision"], body.get("note", ""), by)
+    if path == "/api/route":
+        return o.policy.route(body["task"], body.get("tier"), body.get("provider"), body.get("model"), o.available())
+    if path == "/api/list":
+        return o.list()
+    if path == "/api/status":
+        return o._get(body["id"]).info(full=True)
+    if path == "/api/tail":
+        return o.tail(body["id"], _int(body.get("n", 15), "n"))
+    if path == "/api/events":
+        return o.events(body["id"], _int(body.get("since", 0), "since"), _int(body.get("n", 100), "n"))
+    if path == "/api/result":
+        return o.result(body["id"])
+    if path == "/api/escalations":
+        return [e for e in list(o.escalations.values()) if _bool(body.get("all", False)) or e["state"] == "pending"]
+    if path == "/api/audit":
+        return list(o.audit)[-_int(body.get("n", 50), "n"):]
+    if path == "/api/summary":
+        return {"text": providers.summary_text()}
+    if path == "/api/providers":
+        return providers.all_status(with_models=str(body.get("models", "1")) != "0")
+    if path == "/api/models":
+        names = [body["provider"]] if body.get("provider") else providers.NAMES
+        for n in names:
+            if n not in providers.NAMES:
+                raise ValueError(f"unknown provider {n!r}; valid: {providers.NAMES}")
+        limit = _int(body.get("limit", 50), "limit")
+        flt = str(body.get("filter") or "").lower()
+        out = {}
+        for n in names:
+            rec = providers.models(n, force=_bool(body.get("refresh", False)))
+            hit = [m for m in rec["models"] if flt in m["id"].lower()] if flt else rec["models"]
+            out[n] = {"enabled": providers.enabled(n), "source": rec["source"], "error": rec["error"],
+                      "total": len(rec["models"]), "matched": len(hit), "models": hit[:limit], "truncated": len(hit) > limit}
+        return out
+    if path == "/api/provider":
+        out = providers.set_enabled(body["name"], _bool(body["enabled"]))
+        o._audit("provider_toggle", provider=body["name"], enabled=out["enabled"], by=by)
+        return out
+    if path == "/api/health":
+        return {"ok": True, "providers": o.available(), "agents": len(o.agents)}
+    raise KeyError(path)
+
+
+PUBLIC = {"/api/health"}
+WRITES = {"/api/spawn", "/api/send", "/api/interrupt", "/api/stop", "/api/resolve", "/api/provider"}
+MAX_BODY = 1_000_000
+CSP = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; "
+       "img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+
+
+class H(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.0"
+
+    @staticmethod
+    def _err(e):
+        if isinstance(e, KeyError):
+            return {"error": f"missing or unknown value: {e.args[0]}", "kind": "KeyError"}
+        return {"error": str(e) or type(e).__name__, "kind": type(e).__name__}
+
+    def _send(self, code, data, ctype, extra=()):
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        for k, v in extra:
+            self.send_header(k, v)
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _json(self, obj, code=200):
+        self._send(code, json.dumps(obj).encode(), "application/json")
+
+    def _origin_ok(self):
+        """Host must be the loopback address (blocks DNS rebinding); a browser Origin, if sent, must match it too."""
+        ok = {f"127.0.0.1:{PORT}", f"localhost:{PORT}", f"[::1]:{PORT}"}
+        if (self.headers.get("Host") or "") not in ok:
+            return False
+        origin = self.headers.get("Origin")
+        return origin is None or origin in {f"http://{h}" for h in ok}
+
+    def _authed(self):
+        got = (self.headers.get("Authorization") or "").removeprefix("Bearer ").strip()
+        return bool(got) and hmac.compare_digest(got.encode(), TOKEN.encode())
+
+    def _gate(self, path):
+        if not self._origin_ok():
+            self._json({"error": "bad Host/Origin (loopback only)"}, 403)
+            return False
+        if path not in PUBLIC and not self._authed():
+            self._json({"error": "bad or missing token"}, 401)
+            return False
+        return True
+
+    def do_GET(self):
+        u = urlparse(self.path)
+        if u.path == "/":
+            if not self._origin_ok():
+                return self._json({"error": "bad Host/Origin (loopback only)"}, 403)
+            html = open(os.path.join(HERE, "orch", "dashboard.html"), encoding="utf-8").read().replace("__TOKEN__", TOKEN)
+            return self._send(200, html.encode(), "text/html; charset=utf-8",
+                              [("Content-Security-Policy", CSP), ("X-Frame-Options", "DENY"), ("Referrer-Policy", "no-referrer")])
+        if not u.path.startswith("/api/"):
+            return self._json({"error": "not found"}, 404)
+        if not self._gate(u.path):
+            return
+        if u.path in WRITES:
+            return self._json({"error": "use POST for this call"}, 405)
+        q = {k: v[0] for k, v in parse_qs(u.query).items()}
+        try:
+            self._json(api(u.path, q, q))
+        except Exception as e:
+            self._json(self._err(e), 400)
+
+    def do_POST(self):
+        u = urlparse(self.path)
+        if not self._gate(u.path):
+            return
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            return self._json({"error": "bad Content-Length"}, 400)
+        if n > MAX_BODY:
+            return self._json({"error": "body too large"}, 413)
+        try:
+            body = json.loads(self.rfile.read(n) or b"{}")
+            if not isinstance(body, dict):
+                raise ValueError("body must be a JSON object")
+        except ValueError as e:
+            return self._json({"error": f"invalid JSON: {e}"}, 400)
+        try:
+            self._json(api(u.path, body, {}))
+        except Exception as e:
+            self._json(self._err(e), 400)
+
+    def log_message(self, *a):
+        pass
+
+
+_JOB = []
+
+
+def _kill_children_on_exit():
+    """Windows: put the daemon in a kill-on-close Job Object so its agent processes die with it (crash, taskkill, closed console)."""
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+        from ctypes import wintypes
+        k = ctypes.WinDLL("kernel32", use_last_error=True)
+        k.CreateJobObjectW.restype = wintypes.HANDLE
+        k.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+        k.SetInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD]
+        k.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+        k.GetCurrentProcess.restype = wintypes.HANDLE
+
+        class Basic(ctypes.Structure):
+            _fields_ = [("PerProcessUserTimeLimit", ctypes.c_int64), ("PerJobUserTimeLimit", ctypes.c_int64),
+                        ("LimitFlags", wintypes.DWORD), ("MinimumWorkingSetSize", ctypes.c_size_t),
+                        ("MaximumWorkingSetSize", ctypes.c_size_t), ("ActiveProcessLimit", wintypes.DWORD),
+                        ("Affinity", ctypes.c_size_t), ("PriorityClass", wintypes.DWORD),
+                        ("SchedulingClass", wintypes.DWORD)]
+
+        class IoCounters(ctypes.Structure):
+            _fields_ = [(n, ctypes.c_uint64) for n in ("r", "w", "o", "rb", "wb", "ob")]
+
+        class Ext(ctypes.Structure):
+            _fields_ = [("Basic", Basic), ("Io", IoCounters), ("ProcessMemoryLimit", ctypes.c_size_t),
+                        ("JobMemoryLimit", ctypes.c_size_t), ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                        ("PeakJobMemoryUsed", ctypes.c_size_t)]
+
+        job = k.CreateJobObjectW(None, None)
+        info = Ext()
+        info.Basic.LimitFlags = 0x2000                      # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        if job and k.SetInformationJobObject(job, 9, ctypes.byref(info), ctypes.sizeof(info)) \
+                and k.AssignProcessToJobObject(job, k.GetCurrentProcess()):
+            _JOB.append(job)                                # keep the handle alive for the daemon's lifetime
+    except Exception:
+        pass
+
+
+class Server(ThreadingHTTPServer):
+    allow_reuse_address = False       # on Windows SO_REUSEADDR would let a second daemon share the port
+    daemon_threads = True
+
+
+def main():
+    _kill_children_on_exit()
+    try:
+        srv = Server(("127.0.0.1", PORT), H)
+    except OSError as e:
+        sys.exit(f"cannot bind 127.0.0.1:{PORT} ({e}). Is Switchyard already running? Set ORCH_PORT to use another port.")
+    providers.refresh_all_async()      # warm the model lists in the background
+    print(f"switchyard on http://127.0.0.1:{PORT}  usable providers={ORCH.available()}"
+          f"{'  (agents die with the daemon)' if _JOB else ''}", flush=True)
+    try:
+        srv.serve_forever()
+    finally:
+        ORCH.shutdown()
+
+
+if __name__ == "__main__":
+    main()

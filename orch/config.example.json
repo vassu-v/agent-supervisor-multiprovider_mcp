@@ -1,0 +1,9 @@
+{
+  "providers": {
+    "agy":      { "enabled": true },
+    "claude":   { "enabled": true, "extra_models": [] },
+    "opencode": { "enabled": true },
+    "codex":    { "enabled": true }
+  },
+  "model_cache_ttl_s": 600
+}
