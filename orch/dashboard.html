@@ -1,22 +1,28 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><uiHead><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Switchyard</title>
 <style>
-:root{--bg:#f7f7f5;--card:#fff;--fg:#1c1c1a;--mut:#6b6b66;--line:#e3e3dd;--ok:#2f7d4f;--busy:#b7791f;--dead:#a33;--acc:#2b5fd9}
-@media(prefers-color-scheme:dark){:root{--bg:#161615;--card:#201f1e;--fg:#ecebe6;--mut:#9a9992;--line:#34332f;--ok:#5cc48a;--busy:#e3a948;--dead:#e07070;--acc:#7aa2ff}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,Segoe UI,sans-serif;padding:16px;max-width:1100px;margin:auto}
-h1{font-size:18px;margin:0 0 4px}h2{font-size:13px;margin:22px 0 8px;color:var(--mut);font-family:ui-monospace,Consolas,monospace;word-break:break-all}
-.sub{color:var(--mut);margin-bottom:10px}.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+:root{--bg:#f7f7f5;--card:#fff;--fg:#1c1c1a;--mut:#6b6b66;--line:#e3e3dd;--ok:#2f7d4f;--busy:#b7791f;--dead:#a33;--acc:#2b5fd9;--gbg:#eaf5ee;--gln:#b9dcc6;--pbg:#fbeaf1;--pln:#eab9cf}
+@media(prefers-color-scheme:dark){:root{--bg:#161615;--card:#201f1e;--fg:#ecebe6;--mut:#9a9992;--line:#34332f;--ok:#5cc48a;--busy:#e3a948;--dead:#e07070;--acc:#7aa2ff;--gbg:#18271e;--gln:#2d4a38;--pbg:#2b1a23;--pln:#55304a}}
+*{box-sizing:border-box}body{margin:0 auto;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,Segoe UI,sans-serif;padding:16px;max-width:1300px}
+h1{font-size:18px;margin:0 0 4px}h2{font-size:13px;margin:18px 0 8px;color:var(--mut);font-family:ui-monospace,Consolas,monospace;word-break:break-all}
+.sub{color:var(--mut);margin-bottom:10px}.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:8px}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.id{font-weight:600}.pill{font-size:11px;padding:1px 8px;border-radius:99px;border:1px solid currentColor}
-.idle,.ready{color:var(--ok)}.busy,.degraded{color:var(--busy)}.dead,.starting,.off,.not_installed,.needs_login,.no_adapter{color:var(--dead)}.mut{color:var(--mut)}
-.last{margin:6px 0 0;color:var(--mut);white-space:pre-wrap;word-break:break-word;max-height:4.4em;overflow:hidden}
+.idle,.ready,.done,.started{color:var(--ok)}.busy,.degraded,.blocked,.stale{color:var(--busy)}.dead,.starting,.off,.not_installed,.needs_login,.no_adapter{color:var(--dead)}.mut{color:var(--mut)}
+.txt{margin:4px 0 0;white-space:pre-wrap;word-break:break-word}.last{color:var(--mut);max-height:3em;overflow:hidden;margin:4px 0 0;white-space:pre-wrap;word-break:break-word}
 button{font:inherit;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:6px;padding:2px 9px;cursor:pointer}button:hover{border-color:var(--acc);color:var(--acc)}
+input,select{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px;min-width:0}input[type=text]{flex:1;min-width:120px}
 .esc{border-color:var(--busy)}pre{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px;overflow:auto;max-height:260px;font-size:12px;white-space:pre-wrap;word-break:break-word}
-.sp{flex:1}.prov{margin:0;padding:6px 10px;display:flex;gap:8px;align-items:center}</style></head><body>
+.sp{flex:1}.prov{margin:0;padding:6px 10px;display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.tab{padding:4px 12px;border-radius:99px}.tab.sel{border-color:var(--acc);color:var(--acc);font-weight:600}
+.cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:800px){.cols{grid-template-columns:1fr}}
+.chip{font:11px ui-monospace,Consolas,monospace;padding:0 6px;border-radius:4px;border:1px solid var(--line);color:var(--mut)}.badge{font-size:11px;padding:0 6px;border-radius:4px;background:var(--line)}
+.green{background:var(--gbg);border-color:var(--gln)}.pink{background:var(--pbg);border-color:var(--pln)}.dim{opacity:.6}
+.kids{border-left:2px solid var(--line)}</style></uiHead><body>
 <h1>Switchyard</h1><div class="sub" id="meta">connecting…</div>
 <div id="prov" class="row" style="margin-bottom:6px"></div>
-<div id="esc"></div><div id="groups"></div>
-<h2 style="margin-top:26px">audit (latest)</h2><pre id="audit"></pre>
+<div id="esc"></div><div id="tabs" class="tabs"></div><div id="main"></div>
 <script>
 "use strict";
 const TOKEN="__TOKEN__";
@@ -27,41 +33,133 @@ const post=(p,b)=>fetch(p,{method:"POST",headers:H,body:JSON.stringify({by:"dash
 const esc=s=>String(s??"").replace(/[&<>"'`]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;","`":"&#96;"}[c]));
 const LAB={ready:"ready",degraded:"degraded",disabled:"off",not_installed:"not installed",needs_login:"needs login",no_adapter:"no adapter"};
 const CLS={ready:"ready",degraded:"degraded",disabled:"off",not_installed:"not_installed",needs_login:"needs_login",no_adapter:"no_adapter"};
-let open=null;
+const KINDS=["info","started","done","changed","blocked","handoff"];
+const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+const S={tab:ls.get("sy_tab")||"all",open:null,showDead:{},showAct:{},showAns:{}};
+const cache={};
+const ago=ts=>{const s=Math.max(0,Math.round(Date.now()/1000-ts));return s<90?s+"s":s<5400?Math.round(s/60)+"m":Math.round(s/3600)+"h"};
+const owner=o=>{o=String(o||"");return o.startsWith("session:")?o.slice(8).split("/")[0]:o.startsWith("agent:")?o.slice(6):o};
+const q=encodeURIComponent;
+// replace a panel's HTML only when it changed; keep typed values, focus and caret across the swap
+function setPanel(id,html){
+  if(cache[id]===html)return;cache[id]=html;
+  const el=document.getElementById(id),keep={},act=document.activeElement;
+  el.querySelectorAll("[data-k]").forEach(i=>keep[i.dataset.k]=i.value);
+  const fk=act&&el.contains(act)?act.dataset.k:null,ss=fk?act.selectionStart:0,se=fk?act.selectionEnd:0;
+  el.innerHTML=html;
+  el.querySelectorAll("[data-k]").forEach(i=>{if(keep[i.dataset.k]!==undefined)i.value=keep[i.dataset.k]});
+  if(fk){const n=[...el.querySelectorAll("[data-k]")].find(i=>i.dataset.k===fk);if(n){n.focus();try{n.setSelectionRange(ss,se)}catch(e){}}}
+}
+const uiPaths=p=>(p||[]).map(x=>`<span class="chip">${esc(x)}</span>`).join(" ");
+function uiAgent(a,ev){
+  const uiOwner=a.owner?`<span class="badge">${esc(owner(a.owner))}</span>`:"";
+  const uiGoal=a.goal?`<div class="txt">${esc(a.goal)}</div>`:"";
+  const uiBtn=a.status!="dead"?`<button data-act="interrupt" data-id="${esc(a.id)}">interrupt</button><button data-act="stop" data-id="${esc(a.id)}">stop</button>`:"";
+  const uiStop=a.stopped_by?`<div class="mut">stopped by ${esc(a.stopped_by.by)}: ${esc(a.stopped_by.reason)}</div>`:"";
+  const uiRev=a.needs_review?`<div class="busy">needs review before accepting</div>`:"";
+  const uiEv=S.open==a.id?`<pre>${esc(ev)}</pre>`:"";
+  const u=a.usage||{},uiQ=a.queued?" · "+esc(a.queued)+" queued":"";
+  return `<div class="card" style="margin-left:${esc(Math.min(a.depth||0,6)*18)}px"><div class="row"><span class="id">${esc(a.id)}</span><span class="pill ${esc(a.status)}">${esc(a.status)}</span>
+    <span class="mut">${esc(a.provider)} · ${esc(a.model||"default")} · tier ${esc(a.tier)}</span>${uiOwner}<span class="sp"></span>
+    <span class="mut">${esc(a.turns)} turns${uiQ} · ${esc(u.input)}/${esc(u.output)} tok · cache ${esc(u.cache_read)}</span>
+    <button data-act="events" data-id="${esc(a.id)}">events</button>${uiBtn}</div>${uiGoal}<div>${uiPaths(a.paths)}</div>${uiStop}${uiRev}
+    <div class="last">${esc(a.last_text)}</div>${uiEv}</div>`;
+}
+function uiTree(ws,rows,ev){
+  const live=rows.filter(a=>a.status!="dead"),dead=rows.filter(a=>a.status=="dead");
+  const uiLive=live.map(a=>uiAgent(a,ev)).join("")||`<div class="mut">no live agents</div>`;
+  const uiLbl=S.showDead[ws]?"hide":dead.length+" finished",uiList=S.showDead[ws]?dead.map(a=>uiAgent(a,ev)).join(""):"";
+  const uiDead=dead.length?`<button data-act="showdead" data-ws="${esc(ws)}">${esc(uiLbl)}</button>${uiList}`:"";
+  return `<h2>agents</h2>${uiLive}${uiDead}`;
+}
+function uiPost(p,answers){
+  const uiPaths2=uiPaths(p.paths),uiStale=p.stale?`<span class="pill stale">stale</span>`:"";
+  const uiHead=`<div class="row"><span class="pill ${esc(p.kind)}">${esc(p.kind)}</span><span class="id">${esc(p.sender)}</span><span class="sp"></span><span class="mut">${esc(ago(p.ts))} ago</span>${uiStale}</div>`;
+  if(p.kind!="question")return `<div class="card green">${uiHead}<div class="txt">${esc(p.text)}</div>${uiPaths2}</div>`;
+  const ans=(answers[p.id]||[]),done=p.status=="answered";
+  const uiAns=ans.map(a=>`<div class="txt"><b>${esc(a.sender)}:</b> ${esc(a.text)}</div>`).join("");
+  if(done&&!S.showAns[p.id])return `<div class="card pink dim"><div class="row"><span class="mut">answered:</span><span>${esc(p.text.slice(0,80))}</span><span class="sp"></span><button data-act="showans" data-id="${esc(p.id)}">show</button></div></div>`;
+  const uiForm=done?`<button data-act="showans" data-id="${esc(p.id)}">hide</button>`:`<div class="row" style="margin-top:6px"><input type="text" data-k="a-${esc(p.id)}" placeholder="answer…"><button data-act="answer" data-id="${esc(p.id)}">answer</button></div>`;
+  return `<div class="card pink">${uiHead}<div class="txt">${esc(p.text)}</div>${uiPaths2}${uiAns}${uiForm}</div>`;
+}
+const uiAutoLines=a=>a.map(p=>`<div class="mut">${esc(ago(p.ts))} · ${esc(p.event||"")} ${esc(p.text)}</div>`).join("");
+function uiBoard(ws,b){
+  const posts=b.posts||[],answers={};
+  posts.filter(p=>p.kind=="answer").forEach(a=>(answers[a.reply_to]=answers[a.reply_to]||[]).push(a));
+  const ann=posts.filter(p=>KINDS.includes(p.kind)).reverse(),qs=posts.filter(p=>p.kind=="question").sort((a,b)=>(a.status=="answered")-(b.status=="answered")||b.id-a.id);
+  const auto=posts.filter(p=>p.kind=="auto").reverse().slice(0,40);
+  const uiLines=S.showAct[ws]?`<div class="dim">${uiAutoLines(auto)}</div>`:"";
+  const uiAuto=auto.length?`<button data-act="showact" data-ws="${esc(ws)}">activity (${esc(auto.length)})</button>${uiLines}`:"";
+  const uiKinds=KINDS.map(k=>`<option>${esc(k)}</option>`).join("");
+  const uiFormHtml=`<div class="card"><div class="row" data-ws="${esc(ws)}"><select data-k="kind">${uiKinds}</select><input type="text" data-k="post" placeholder="post an announcement or ask a question as dashboard">
+    <button data-act="announce" data-ws="${esc(ws)}">announce</button><button data-act="ask" data-ws="${esc(ws)}">ask</button></div></div>`;
+  const uiAnn=ann.map(p=>uiPost(p,answers)).join("")||`<div class="mut">nothing announced</div>`;
+  const uiQs=qs.map(p=>uiPost(p,answers)).join("")||`<div class="mut">no questions</div>`;
+  return `<h2>board</h2>${uiFormHtml}<h2>announcements</h2>${uiAnn}
+    <h2>open questions (${esc(b.open_questions??0)})</h2>${uiQs}${uiAuto}`;
+}
+function uiOverview(wss,boards,audit){
+  const uiRows=wss.map(w=>{
+    const b=boards[w.id]||{},last=(b.posts||[]).filter(p=>KINDS.includes(p.kind)).pop();
+    const uiLast=last?`${esc(last.sender)}: ${esc(last.text.slice(0,90))}`:`<span class="mut">no announcements</span>`;
+    return `<div class="card"><div class="row"><span class="id">${esc(w.name)}</span><span class="mut">${esc(w.agents)} agents · ${esc(w.busy)} busy · ${esc(b.open_questions??0)} open questions</span><span class="sp"></span><button data-act="tab" data-ws="${esc(w.id)}">open</button></div><div class="txt">${uiLast}</div></div>`}).join("");
+  return `<h2>workspaces</h2>${uiRows||`<div class="mut">no workspaces yet</div>`}<h2>audit (latest)</h2><pre>${esc(audit)}</pre>`;
+}
+function uiTabs(wss){
+  const t=(id,uiLabel)=>`<button class="tab${esc(S.tab==id?" sel":"")}" data-act="tab" data-ws="${esc(id)}">${uiLabel}</button>`;
+  return t("all","All")+wss.map(w=>{
+    const uiCl=(w.sessions||[]).map(s=>`<span class="badge">${esc(s.client)}</span>`).join(" ");
+    return t(w.id,`${esc(w.name)} <span class="mut">${esc(w.agents)}</span> ${uiCl}`)}).join("");
+}
 async function tick(){
   try{
-    const [list,escs,audit,health,provs]=await Promise.all(["/api/list","/api/escalations","/api/audit?n=12","/api/health","/api/providers"].map(get));
-    if(!Array.isArray(list))throw new Error(list.error||"bad response");
-    document.getElementById("meta").textContent=`${list.length} agents · ${health.providers.length} of ${provs.length} providers usable · refreshes every 2s`;
-    document.getElementById("prov").innerHTML=provs.map(p=>`<div class="card prov"><span class="id">${esc(p.name)}</span>
+    const [wss,escs,provs,health]=await Promise.all(["/api/workspaces","/api/escalations","/api/providers","/api/health"].map(get));
+    if(!Array.isArray(wss))throw new Error("bad response");
+    if(S.tab!="all"&&!wss.some(w=>w.id==S.tab))S.tab="all";
+    document.getElementById("meta").textContent=wss.reduce((n,w)=>n+w.agents,0)+" agents · "+wss.length+" workspaces · "+health.providers.length+" of "+provs.length+" providers usable · refreshes every 2s";
+    setPanel("prov",provs.map(p=>{const uiM=p.models?esc(p.models.length)+" models"+(p.models_source=="static"?" (aliases)":""):"";return `<div class="card prov"><span class="id">${esc(p.name)}</span>
       <span class="pill ${esc(CLS[p.state]||"dead")}">${esc(LAB[p.state]||p.state)}</span>
-      <span class="mut">${p.models?esc(p.models.length)+" models"+(p.models_source=="static"?" (aliases)":""):""}</span>
-      <button data-act="toggle" data-name="${esc(p.name)}" data-enabled="${p.enabled?"0":"1"}">${p.enabled?"turn off":"turn on"}</button></div>`).join("");
-    document.getElementById("esc").innerHTML=escs.length?"<h2>needs a decision</h2>"+escs.map(e=>`<div class="card esc"><div class="row"><span class="id">${esc(e.agent)}</span><span class="mut">${esc(e.why)}</span><span class="sp"></span>
-      <button data-act="resolve" data-id="${esc(e.id)}" data-decision="allow">allow</button><button data-act="resolve" data-id="${esc(e.id)}" data-decision="deny">deny</button></div><pre>${esc(e.input)}</pre></div>`).join(""):"";
-    const g={};list.forEach(a=>(g[a.cwd]=g[a.cwd]||[]).push(a));
-    document.getElementById("groups").innerHTML=Object.keys(g).sort().map(d=>`<h2>${esc(d)}</h2>`+g[d].map(a=>`
-      <div class="card"><div class="row"><span class="id">${esc(a.id)}</span><span class="pill ${esc(a.status)}">${esc(a.status)}</span>
-      <span class="mut">${esc(a.provider)} · ${esc(a.model||"default")} · tier ${esc(a.tier)}</span><span class="sp"></span>
-      <span class="mut">${esc(a.turns)} turns · ${esc(a.usage.input)}/${esc(a.usage.output)} tok · cache ${esc(a.usage.cache_read)}${a.restarts?` · ${esc(a.restarts)} restarts`:""}</span>
-      <button data-act="events" data-id="${esc(a.id)}">events</button>${a.status!="dead"?`<button data-act="interrupt" data-id="${esc(a.id)}">interrupt</button><button data-act="stop" data-id="${esc(a.id)}">stop</button>`:""}</div>
-      ${a.stopped_by?`<div class="mut">stopped by ${esc(a.stopped_by.by)}: ${esc(a.stopped_by.reason)}</div>`:""}
-      ${a.needs_review?`<div class="busy">needs review before accepting</div>`:""}
-      <div class="last">${esc(a.last_text)}</div>${open==a.id?`<pre id="ev"></pre>`:""}</div>`).join("")).join("");
-    document.getElementById("audit").textContent=audit.map(x=>new Date(x.ts*1000).toLocaleTimeString()+"  "+x.kind+"  "+(x.agent||x.escalation||x.provider||"")+"  "+(x.reason||x.why||x.decision||x.text||"")).join("\n");
-    if(open){const ev=await get("/api/tail?id="+encodeURIComponent(open)+"&n=40");const el=document.getElementById("ev");
-      if(el&&Array.isArray(ev))el.textContent=ev.map(e=>e.type+"  "+(e.text||(e.tool?e.tool+" "+JSON.stringify(e.input??""):"")||e.state||e.why||e.message||"")).join("\n")}
+      <span class="mut">${uiM}</span>
+      <button data-act="toggle" data-name="${esc(p.name)}" data-enabled="${esc(p.enabled?"0":"1")}">${esc(p.enabled?"turn off":"turn on")}</button></div>`}).join(""));
+    setPanel("esc",escs.length?"<h2>needs a decision</h2>"+escs.map(e=>`<div class="card esc"><div class="row"><span class="id">${esc(e.agent)}</span><span class="mut">${esc(e.why)}</span><span class="sp"></span>
+      <button data-act="resolve" data-id="${esc(e.id)}" data-decision="allow">allow</button><button data-act="resolve" data-id="${esc(e.id)}" data-decision="deny">deny</button></div><pre>${esc(e.input)}</pre></div>`).join(""):"");
+    setPanel("tabs",uiTabs(wss));
+    if(S.tab=="all"){
+      const [bs,audit]=await Promise.all([Promise.all(wss.map(w=>get("/api/board?ws="+q(w.id)+"&n=30"))),get("/api/audit?n=12")]);
+      const boards={};wss.forEach((w,i)=>boards[w.id]=bs[i]);
+      setPanel("main",uiOverview(wss,boards,audit.map(x=>new Date(x.ts*1000).toLocaleTimeString()+"  "+x.kind+"  "+(x.agent||x.escalation||x.provider||"")+"  "+(x.reason||x.why||x.decision||x.text||"")).join("\n")));
+    }else{
+      const ws=S.tab;
+      const [rows,board]=await Promise.all([get("/api/list?ws="+q(ws)+"&tree=1"),get("/api/board?ws="+q(ws)+"&n=100")]);
+      let ev="";
+      if(S.open){const t=await get("/api/tail?id="+q(S.open)+"&n=40");if(Array.isArray(t))ev=t.map(e=>e.type+"  "+(e.text||(e.tool?e.tool+" "+JSON.stringify(e.input??""):"")||e.state||e.why||e.message||"")).join("\n")}
+      setPanel("main",`<div class="cols"><div>${uiTree(ws,Array.isArray(rows)?rows:[],ev)}</div><div>${uiBoard(ws,board)}</div></div>`);
+    }
   }catch(e){document.getElementById("meta").textContent="orchestrator unreachable or token rejected"}
 }
+const flip=(o,k)=>{o[k]=!o[k]};
 document.addEventListener("click",async ev=>{
   const b=ev.target.closest("button[data-act]");if(!b)return;
-  const d=b.dataset;
+  const d=b.dataset,box=b.closest(".row");
+  const val=k=>{const i=document.querySelector(`[data-k="${CSS.escape(k)}"]`);return i?i.value.trim():""};
   if(d.act=="toggle")await post("/api/provider",{name:d.name,enabled:d.enabled=="1"});
   else if(d.act=="resolve")await post("/api/resolve",{escalation:d.id,decision:d.decision});
   else if(d.act=="interrupt")await post("/api/interrupt",{id:d.id});
-  else if(d.act=="events")open=open==d.id?null:d.id;
+  else if(d.act=="events")S.open=S.open==d.id?null:d.id;
   else if(d.act=="stop"){const r=prompt("Reason for stopping "+d.id+"?");if(r)await post("/api/stop",{id:d.id,reason:r})}
-  tick();
+  else if(d.act=="tab"){S.tab=d.ws;ls.set("sy_tab",d.ws);cache.main=null}
+  else if(d.act=="showdead")flip(S.showDead,d.ws);
+  else if(d.act=="showact")flip(S.showAct,d.ws);
+  else if(d.act=="showans")flip(S.showAns,d.id);
+  else if(d.act=="answer"){const t=val("a-"+d.id);if(t){await post("/api/answer",{id:Number(d.id),text:t});const i=document.querySelector(`[data-k="${CSS.escape("a-"+d.id)}"]`);if(i)i.value=""}}
+  else if(d.act=="announce"||d.act=="ask"){const t=val("post");if(t){
+    await post(d.act=="ask"?"/api/ask":"/api/announce",d.act=="ask"?{ws:d.ws,text:t}:{ws:d.ws,text:t,kind:val("kind")||"info"});
+    const i=document.querySelector('[data-k="post"]');if(i)i.value=""}}
+  cache.prov=cache.esc=cache.tabs=cache.main=null;tick();
+});
+document.addEventListener("keydown",ev=>{
+  if(ev.key!="Enter"||!ev.target.dataset||!ev.target.dataset.k)return;
+  const b=ev.target.closest(".row").querySelector("button[data-act=answer],button[data-act=announce]");if(b)b.click();
 });
 tick();setInterval(tick,2000);
 </script></body></html>
