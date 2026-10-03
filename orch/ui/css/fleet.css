@@ -1,0 +1,21 @@
+/* Fleet view extras. Tokens only from theme.css; structure comes from styles.css.
+   Fleet rows carry four cells (gutter, identity, provider/model, tokens), so
+   the grid drops the timeline and turns columns here. */
+.fleet .row, .fleet .colh { grid-template-columns: var(--rail-w, 72px) minmax(0, 1fr) var(--pm-w, 168px) 92px; }
+.fleet-bar { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); align-items: center; margin-bottom: var(--sp-4); }
+.fleet-bar .tabs { margin-bottom: 0; border-bottom: 0; }
+.fleet-bar input { flex: 1; min-width: 160px; }
+.badges { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.tool-line { color: var(--c-text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-12); }
+.fleet-status:empty { display: none; }
+[data-density="compact"] .tool-line { display: none; }
+@media (max-width: 760px) {
+  .fleet .row, .fleet .colh { grid-template-columns: var(--rail-w, 72px) minmax(0, 1fr) 128px 64px; }
+}
+@media (max-width: 560px) {
+  .fleet .row { grid-template-columns: var(--rail-w, 56px) minmax(0, 1fr) auto; }
+  .tool-line { white-space: normal; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .row.woken { animation: none; }
+}
