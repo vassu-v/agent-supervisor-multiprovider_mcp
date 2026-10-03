@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Switchyard</title>
+<link rel="stylesheet" href="styles.css">
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+<!-- glyph library: one stroke weight, 12px grid, currentColor. Use with h('svg', {class: 'i'}, h('use', {href: '#g-agy'})) -->
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="g-agy" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="currentColor"/></symbol>
+  <symbol id="g-claude" viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" rx="1" fill="currentColor"/></symbol>
+  <symbol id="g-opencode" viewBox="0 0 12 12"><path d="M6 1 11.2 10.5H.8Z" fill="currentColor"/></symbol>
+  <symbol id="g-codex" viewBox="0 0 12 12"><path d="M6 .6 11.4 6 6 11.4.6 6Z" fill="currentColor"/></symbol>
+  <symbol id="g-other" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="s-busy" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" fill="currentColor"/></symbol>
+  <symbol id="s-idle" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="s-dead" viewBox="0 0 12 12"><path d="M3 3l6 6M9 3 3 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="s-err" viewBox="0 0 12 12"><path d="M6 1 11.3 10.5H.7Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M6 4.5v2.6M6 8.7v.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="s-wait" viewBox="0 0 12 12"><circle cx="6" cy="4.5" r="3.5" fill="currentColor"/><path d="M6 8v4" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="k-done" viewBox="0 0 12 12"><path d="M2 6.5 5 9.2 10 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="k-started" viewBox="0 0 12 12"><path d="M3.5 2v8L10 6Z" fill="currentColor"/></symbol>
+  <symbol id="k-info" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6 5.4v3.2M6 3.4v.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="k-q" viewBox="0 0 12 12"><path d="M4 4.3a2 2 0 1 1 2.8 1.8c-.6.3-.8.6-.8 1.3M6 9.6v.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="k-up" viewBox="0 0 12 12"><path d="M6 10V2.5M3 5.5l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="k-yard" viewBox="0 0 16 16"><path d="M1 12h14M1 12c4 0 5-6 9-6h5M1 12c4 0 6-3 8-3h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="k-close" viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+</svg>
+
+<button type="button" class="skip" id="skip">Skip to content</button>
+
+<header class="top" id="top">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 28 20" aria-hidden="true" focusable="false">
+      <path class="logo-rail" d="M2 10h8c5 0 6-6 12-6h4M10 10c5 0 6 6 12 6h4"/>
+      <path class="logo-route" d="M2 10h8c5 0 6-6 12-6h4"/>
+      <circle class="logo-node" cx="10" cy="10" r="3"/>
+    </svg>
+    <h1>Switchyard</h1>
+  </div>
+  <p class="meta" id="meta">connecting…</p>
+  <div class="sp"></div>
+  <div class="provs" id="provs" role="group" aria-label="Providers"></div>
+  <div class="ctl">
+    <button type="button" id="density-btn" aria-keyshortcuts=".">Density: auto</button>
+    <button type="button" id="theme-btn">Theme: system</button>
+    <button type="button" id="help-btn" aria-keyshortcuts="?" aria-haspopup="dialog">Keys</button>
+  </div>
+</header>
+
+<nav class="views" id="views" aria-label="Views">
+  <a href="#/fleet" data-view="fleet">Fleet</a>
+  <a href="#/timeline" data-view="timeline">Timeline</a>
+  <a href="#/fleet" data-view="board">Board</a>
+  <a href="#/models" data-view="models">Models</a>
+  <a href="#/escalations" data-view="escalations">Escalations<span class="n" id="esc-count"></span></a>
+  <a href="#/audit" data-view="audit">Audit</a>
+</nav>
+
+<section id="esc-bar" aria-label="Needs a decision"></section>
+
+<main id="main" tabindex="-1"></main>
+
+<aside id="drawer" role="dialog" aria-modal="true" aria-label="Agent details" tabindex="-1" hidden></aside>
+
+<div id="help" class="dialog" role="dialog" aria-modal="true" aria-labelledby="help-title" tabindex="-1" hidden></div>
+
+<div id="live-assertive" class="vh" aria-live="assertive" aria-atomic="true"></div>
+<div id="live-polite" class="vh" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>
