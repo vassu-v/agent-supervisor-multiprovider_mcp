@@ -1,0 +1,24 @@
+/* Board view extras. Structure only; colour, type and space come from
+   theme.css through var(--c-*) so both themes keep working. The lane,
+   post, activity and compose rules themselves live in styles.css. */
+.bd { min-width: 0; }
+.bd-title { margin: 0 0 var(--sp-4); font-size: var(--fs-15); }
+.bd-wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-4);
+  align-items: start;
+}
+.bd .lane-posts, .bd .act-posts { min-width: 0; }
+.bd .post.hl { border-color: var(--c-text); background: var(--c-surface-2); }
+.bd .err { color: var(--c-danger); margin: var(--sp-2) 0 0; font-size: var(--fs-12); }
+.bd-forms { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-4); }
+.bd-forms .compose { flex: 1 1 280px; }
+.bd summary { cursor: pointer; }
+@media (max-width: 1100px) {
+  .bd-wrap { grid-template-columns: 1fr; }
+  .bd-forms { flex-direction: column; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bd .post, .bd .post.hl { transition: none; }
+}
