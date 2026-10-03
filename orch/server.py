@@ -1,17 +1,18 @@
 """HTTP API + live dashboard for the orchestrator. Loopback only. Every call except /api/health needs the bearer token, and
 the Host/Origin headers must be the loopback address (defeats DNS rebinding and cross-site requests)."""
+import hashlib
 import hmac
 import json
 import os
 import secrets
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from orch import identity, providers  # noqa: E402
 from orch import workspace as wsmod  # noqa: E402
-from orch.core import HERE, HOME, Orchestrator  # noqa: E402
+from orch.core import HERE, HOME, Orchestrator, TooManyWaiters  # noqa: E402
 
 PORT = int(os.environ.get("ORCH_PORT", "8765"))
 TOKEN_FILE = os.path.join(HOME, "orch", "token.txt")
@@ -38,12 +39,42 @@ def token():
 
 TOKEN = token()
 
+UI_DIR = os.path.join(HERE, "orch", "ui")
+UI_MIME = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
+           ".svg": "image/svg+xml", ".json": "application/json"}      # .mjs (tests) is deliberately not served
+
+
+def build_ui_whitelist(root=UI_DIR):
+    """{relative/forward/slash/name: (abs path, mime)} for every servable file under orch/ui, built once at startup. Requests
+    are looked up by exact key, so there is no path to traverse."""
+    out = {}
+    for dp, dns, fns in os.walk(root):
+        dns[:] = [d for d in dns if not d.startswith(".")]
+        for fn in fns:
+            ext = os.path.splitext(fn)[1].lower()
+            if fn.startswith(".") or ext not in UI_MIME:
+                continue
+            full = os.path.join(dp, fn)
+            out[os.path.relpath(full, root).replace(os.sep, "/")] = (full, UI_MIME[ext])
+    return out
+
+
+UI_FILES = build_ui_whitelist()
+_UI_ETAGS = {}                                  # name -> (mtime_ns, size, etag)
+
 
 def _int(v, name):
     try:
         return int(v)
     except (TypeError, ValueError):
         raise ValueError(f"{name} must be an integer")
+
+
+def _float(v, name):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        raise ValueError(f"{name} must be a number")
 
 
 def _bool(v):
@@ -144,6 +175,7 @@ def api(path, body, query, who):
         _check_ws(who, body["id"])
         return o.tail(body["id"], _int(body.get("n", 15), "n"))
     if path == "/api/events":
+        _check_ws(who, body["id"])
         return o.events(body["id"], _int(body.get("since", 0), "since"), _int(body.get("n", 100), "n"))
     if path == "/api/result":
         _check_ws(who, body["id"])
@@ -155,7 +187,19 @@ def api(path, body, query, who):
     if path == "/api/summary":
         return {"text": providers.summary_text()}
     if path == "/api/providers":
-        return providers.all_status(with_models=str(body.get("models", "1")) != "0")
+        rows = providers.all_status(with_models=str(body.get("models", "1")) != "0")
+        for r in rows:
+            r["caps"] = o.provider_caps(r["name"])
+        return rows
+    if path == "/api/changes":                    # admin-only long-poll; not in identity.AGENT_ALLOWED
+        since = body.get("since")
+        return o.wait_changes(None if since in (None, "") else _int(since, "since"), _float(body.get("wait", 25), "wait"))
+    if path == "/api/timeline":
+        ws = body.get("ws") or None
+        if not ws and not _bool(body.get("all", False)):
+            raise ValueError("ws is required (or all=1)")
+        opt = lambda k: None if body.get(k) in (None, "") else _float(body[k], k)  # noqa: E731
+        return o.timeline(None if _bool(body.get("all", False)) else ws, opt("since"), opt("until"), _int(body.get("max", 2000), "max"))
     if path == "/api/models":
         names = [body["provider"]] if body.get("provider") else providers.NAMES
         for n in names:
@@ -184,7 +228,10 @@ WRITES = {"/api/spawn", "/api/send", "/api/interrupt", "/api/stop", "/api/resolv
           "/api/declare", "/api/announce", "/api/ask", "/api/answer"}
 MAX_BODY = 1_000_000
 CSP = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; "
-       "img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+       "img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")      # legacy dashboard (inline code)
+UI_CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; "
+          "img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+SEC = [("X-Frame-Options", "DENY"), ("Referrer-Policy", "no-referrer")]
 
 
 class H(BaseHTTPRequestHandler):
@@ -196,11 +243,11 @@ class H(BaseHTTPRequestHandler):
             return {"error": f"missing or unknown value: {e.args[0]}", "kind": "KeyError"}
         return {"error": str(e) or type(e).__name__, "kind": type(e).__name__}
 
-    def _send(self, code, data, ctype, extra=()):
+    def _send(self, code, data, ctype, extra=(), cache="no-store"):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(data)))
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", cache)
         self.send_header("X-Content-Type-Options", "nosniff")
         for k, v in extra:
             self.send_header(k, v)
@@ -250,14 +297,41 @@ class H(BaseHTTPRequestHandler):
             return None
         return who
 
+    def _static(self, name):
+        name = name or "index.html"
+        if ".." in name or "\\" in name or "\x00" in name or name.startswith("/") or name not in UI_FILES:
+            return self._json({"error": "not found"}, 404)
+        full, mime = UI_FILES[name]
+        try:
+            st = os.stat(full)
+            with open(full, "rb") as f:
+                data = f.read()
+        except OSError:
+            return self._json({"error": "not found"}, 404)
+        sig = (st.st_mtime_ns, st.st_size)
+        cached = _UI_ETAGS.get(name)
+        if cached and cached[:2] == sig:
+            etag = cached[2]
+        else:
+            etag = '"' + hashlib.sha1(data).hexdigest()[:20] + '"'
+            _UI_ETAGS[name] = (*sig, etag)
+        hdr = [("ETag", etag), ("Content-Security-Policy", UI_CSP)] + SEC
+        inm = self.headers.get("If-None-Match") or ""
+        if etag in [x.strip() for x in inm.split(",")]:
+            return self._send(304, b"", mime, hdr, cache="no-cache")
+        return self._send(200, data, mime, hdr, cache="no-cache")
+
     def do_GET(self):
         u = urlparse(self.path)
-        if u.path == "/":
+        if u.path in ("/", "/ui", "/legacy", "/ui/") or u.path.startswith("/ui/"):
             if not self._origin_ok():
                 return self._json({"error": "bad Host/Origin (loopback only)"}, 403)
-            html = open(os.path.join(HERE, "orch", "dashboard.html"), encoding="utf-8").read().replace("__TOKEN__", TOKEN)
-            return self._send(200, html.encode(), "text/html; charset=utf-8",
-                              [("Content-Security-Policy", CSP), ("X-Frame-Options", "DENY"), ("Referrer-Policy", "no-referrer")])
+            if u.path in ("/", "/ui"):
+                return self._send(302, b"", "text/plain", [("Location", "/ui/")])
+            if u.path == "/legacy":              # the old dashboard, unchanged, until the new UI reaches parity
+                html = open(os.path.join(HERE, "orch", "dashboard.html"), encoding="utf-8").read().replace("__TOKEN__", TOKEN)
+                return self._send(200, html.encode(), "text/html; charset=utf-8", [("Content-Security-Policy", CSP)] + SEC)
+            return self._static(unquote(u.path[4:]))
         if not u.path.startswith("/api/"):
             return self._json({"error": "not found"}, 404)
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
@@ -269,7 +343,7 @@ class H(BaseHTTPRequestHandler):
         try:
             self._json(api(u.path, q, q, who))
         except Exception as e:
-            self._json(self._err(e), 400)
+            self._json(self._err(e), 429 if isinstance(e, TooManyWaiters) else 400)
 
     def do_POST(self):
         u = urlparse(self.path)
