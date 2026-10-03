@@ -1,0 +1,74 @@
+/* Escalation extras. Structural classes come from styles.css; this file only
+   stacks the bar, keeps code readable and adapts to reduced motion. */
+#esc-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.signal pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.signal .err {
+  color: var(--c-danger);
+  font-size: var(--fs-12);
+  margin: var(--sp-2) 0 0;
+  min-height: 1.4em;
+}
+.esc-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.esc-view h2 {
+  margin: 0;
+  font-size: var(--fs-18);
+}
+.esc-view h3 {
+  margin: var(--sp-4) 0 0;
+  font-size: var(--fs-15);
+}
+.esc-pending {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.esc-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.hctl {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: center;
+}
+.hrow {
+  background: var(--c-surface);
+  border: var(--line-hair) solid var(--c-line);
+  border-radius: var(--radius-2);
+  padding: var(--sp-3) var(--sp-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  align-items: baseline;
+}
+.hrow pre {
+  flex-basis: 100%;
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-12);
+  background: var(--c-surface-sunk);
+  border: var(--line-hair) solid var(--c-line);
+  border-radius: var(--radius-2);
+  padding: var(--sp-2) var(--sp-3);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+@media (prefers-reduced-motion: reduce) {
+  .signal.enter {
+    animation: none;
+  }
+  .signal.enter .head .lamp {
+    animation: none;
+  }
+}
