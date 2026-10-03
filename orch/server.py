@@ -9,11 +9,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from orch import providers  # noqa: E402
-from orch.core import HERE, Orchestrator  # noqa: E402
+from orch import identity, providers  # noqa: E402
+from orch import workspace as wsmod  # noqa: E402
+from orch.core import HERE, HOME, Orchestrator  # noqa: E402
 
 PORT = int(os.environ.get("ORCH_PORT", "8765"))
-TOKEN_FILE = os.path.join(HERE, "orch", "token.txt")
+TOKEN_FILE = os.path.join(HOME, "orch", "token.txt")
+os.makedirs(os.path.dirname(TOKEN_FILE), exist_ok=True)
 ORCH = Orchestrator()
 
 
@@ -48,31 +50,103 @@ def _bool(v):
     return v if isinstance(v, bool) else str(v).lower() in ("1", "true", "yes", "on")
 
 
-def api(path, body, query):
+def _own_ws(who):
+    return ORCH._get(who["aid"]).ws
+
+
+def _check_ws(who, aid):
+    """An agent may only look at / stop agents in its own workspace."""
+    if who["kind"] == "agent" and ORCH._get(aid).ws != _own_ws(who):
+        raise PermissionError("that agent is in a different workspace")
+
+
+def api(path, body, query, who):
     o = ORCH
-    by = body.get("by", "external")
+    by = who["by"]
+    is_agent = who["kind"] == "agent"
     if path == "/api/spawn":
+        parent = who["aid"] if is_agent else (body.get("parent") or None)
         return o.spawn(body["task"], body["cwd"], body.get("provider", "auto"), body.get("model"), body.get("tier"),
-                       body.get("id"), body.get("owner", by), body.get("opts"))
+                       body.get("id"), by, None if is_agent else body.get("opts"), goal=body.get("goal"),
+                       paths=body.get("paths"), parent=parent, session=who.get("session_id"),
+                       effort=body.get("effort"))
     if path == "/api/send":
         return o.send(body["id"], body["msg"], body.get("mode", "queue"), by)
     if path == "/api/interrupt":
         return o.interrupt(body["id"], by)
     if path == "/api/stop":
+        _check_ws(who, body["id"])
         return o.stop(body["id"], by, body.get("reason", ""))
+    if path == "/api/hello":
+        ws = None
+        if body.get("workspace"):
+            try:
+                ws = wsmod.resolve(body["workspace"], override=False)["id"]
+            except ValueError:
+                ws = None
+        s = o.sessions.hello(body.get("client") or "unknown", body.get("label"), ws, body.get("pid"))
+        return {"session": s["id"], "workspace": ws, "client": s["client"], "label": s["label"]}
+    if path == "/api/sessions":
+        live = o.sessions.list_live()
+        if is_agent:                              # agents see who is attached to their own workspace, never ids or pids
+            return [{"client": s["client"], "label": s.get("label")} for s in live if s.get("workspace") == _own_ws(who)]
+        return live
+    if path == "/api/workspaces":
+        return o.workspaces()
+    if path == "/api/workspace":
+        if body.get("path"):
+            r = wsmod.resolve(body["path"], override=False)
+            if is_agent and r["id"] != _own_ws(who):
+                raise PermissionError("agents may only resolve paths inside their own workspace")
+            return r
+        ws = _own_ws(who) if is_agent else body.get("ws")
+        return next((w for w in o.workspaces() if w["id"] == ws), None) or {"id": ws, "agents": 0}
+    if path == "/api/declare":
+        aid = who["aid"] if is_agent else body["id"]
+        return o.declare(aid, body.get("goal"), body.get("paths"), by)
+    if path in ("/api/announce", "/api/ask"):
+        ws = _own_ws(who) if is_agent else (body.get("ws") or None)
+        if not ws:
+            raise ValueError("ws is required (the workspace id to post to; see /api/workspaces)")
+        if path == "/api/announce":
+            return o.board_post(ws, by, body.get("kind", "info"), body["text"], body.get("paths"),
+                                _int(body["reply_to"], "reply_to") if body.get("reply_to") not in (None, "") else None)
+        return o.board_ask(ws, by, body["text"], body.get("paths"))
+    if path == "/api/answer":
+        pid = _int(body["id"], "id")
+        q = o.store.get_post(pid)
+        if not q:
+            raise KeyError(f"post {pid}")
+        if is_agent and q["ws"] != _own_ws(who):
+            raise PermissionError("that question is in a different workspace")
+        return o.board_answer(pid, by, body["text"], ws=q["ws"])
+    if path == "/api/board":
+        ws = _own_ws(who) if is_agent else (body.get("ws") or None)
+        if not ws:
+            raise ValueError("ws is required (the workspace id to read; see /api/workspaces)")
+        kinds = [k for k in str(body.get("kind") or "").split(",") if k] or None
+        return o.board_read(ws, _int(body.get("since", 0), "since"), kinds, _int(body.get("n", 100), "n"))
+    if path == "/api/briefing":
+        ws = _own_ws(who) if is_agent else body.get("ws")
+        return {"text": o.briefing(ws, who["aid"] if is_agent else None)}
     if path == "/api/resolve":
         return o.resolve(body["escalation"], body["decision"], body.get("note", ""), by)
     if path == "/api/route":
-        return o.policy.route(body["task"], body.get("tier"), body.get("provider"), body.get("model"), o.available())
+        return o.policy.route(body["task"], body.get("tier"), body.get("provider"), body.get("model"), o.available(),
+                              effort=body.get("effort"))
     if path == "/api/list":
-        return o.list()
+        ws = _own_ws(who) if is_agent else (None if _bool(body.get("all", False)) else (body.get("ws") or None))
+        return o.list(ws=ws, tree=_bool(body.get("tree", False)))
     if path == "/api/status":
+        _check_ws(who, body["id"])
         return o._get(body["id"]).info(full=True)
     if path == "/api/tail":
+        _check_ws(who, body["id"])
         return o.tail(body["id"], _int(body.get("n", 15), "n"))
     if path == "/api/events":
         return o.events(body["id"], _int(body.get("since", 0), "since"), _int(body.get("n", 100), "n"))
     if path == "/api/result":
+        _check_ws(who, body["id"])
         return o.result(body["id"])
     if path == "/api/escalations":
         return [e for e in list(o.escalations.values()) if _bool(body.get("all", False)) or e["state"] == "pending"]
@@ -91,7 +165,7 @@ def api(path, body, query):
         flt = str(body.get("filter") or "").lower()
         out = {}
         for n in names:
-            rec = providers.models(n, force=_bool(body.get("refresh", False)))
+            rec = providers.models(n, force=_bool(body.get("refresh", False)) and not is_agent)   # agents must not force CLI runs
             hit = [m for m in rec["models"] if flt in m["id"].lower()] if flt else rec["models"]
             out[n] = {"enabled": providers.enabled(n), "source": rec["source"], "error": rec["error"],
                       "total": len(rec["models"]), "matched": len(hit), "models": hit[:limit], "truncated": len(hit) > limit}
@@ -106,7 +180,8 @@ def api(path, body, query):
 
 
 PUBLIC = {"/api/health"}
-WRITES = {"/api/spawn", "/api/send", "/api/interrupt", "/api/stop", "/api/resolve", "/api/provider"}
+WRITES = {"/api/spawn", "/api/send", "/api/interrupt", "/api/stop", "/api/resolve", "/api/provider", "/api/hello",
+          "/api/declare", "/api/announce", "/api/ask", "/api/answer"}
 MAX_BODY = 1_000_000
 CSP = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; "
        "img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
@@ -143,18 +218,37 @@ class H(BaseHTTPRequestHandler):
         origin = self.headers.get("Origin")
         return origin is None or origin in {f"http://{h}" for h in ok}
 
-    def _authed(self):
+    def _identify(self, path, body_by):
+        """-> who dict or None. admin token: full access. Agent token: the agent's own scope only, identity taken from the
+        token (the request's claimed `by` is ignored). A session header labels admin callers (MCP bridge, dashboard)."""
         got = (self.headers.get("Authorization") or "").removeprefix("Bearer ").strip()
-        return bool(got) and hmac.compare_digest(got.encode(), TOKEN.encode())
+        if not got:
+            return {"kind": "public", "by": "external"} if path in PUBLIC else None
+        if hmac.compare_digest(got.encode(), TOKEN.encode()):
+            who = {"kind": "admin", "by": str(body_by or "external")[:40]}
+            sid = self.headers.get("X-Switchyard-Session")
+            if sid and ORCH.sessions.touch(sid):
+                s = ORCH.sessions.get(sid)
+                who.update(by=identity.identity_string("session", s["client"], s.get("label")), session_id=sid)
+            return who
+        aid = ORCH.tokens.verify(got)
+        if aid:
+            return {"kind": "agent", "aid": aid, "by": identity.identity_string("agent", aid)}
+        return {"kind": "public", "by": "external"} if path in PUBLIC else None
 
-    def _gate(self, path):
+    def _gate(self, path, body_by=None):
         if not self._origin_ok():
             self._json({"error": "bad Host/Origin (loopback only)"}, 403)
-            return False
-        if path not in PUBLIC and not self._authed():
+            return None
+        who = self._identify(path, body_by)
+        if who is None:
             self._json({"error": "bad or missing token"}, 401)
-            return False
-        return True
+            return None
+        if who["kind"] == "agent" and not identity.agent_allowed(path):
+            ORCH._audit("agent_denied", agent=who["aid"], path=path)
+            self._json({"error": f"agents may not call {path}"}, 403)
+            return None
+        return who
 
     def do_GET(self):
         u = urlparse(self.path)
@@ -166,19 +260,21 @@ class H(BaseHTTPRequestHandler):
                               [("Content-Security-Policy", CSP), ("X-Frame-Options", "DENY"), ("Referrer-Policy", "no-referrer")])
         if not u.path.startswith("/api/"):
             return self._json({"error": "not found"}, 404)
-        if not self._gate(u.path):
+        q = {k: v[0] for k, v in parse_qs(u.query).items()}
+        who = self._gate(u.path, q.get("by"))
+        if who is None:
             return
         if u.path in WRITES:
             return self._json({"error": "use POST for this call"}, 405)
-        q = {k: v[0] for k, v in parse_qs(u.query).items()}
         try:
-            self._json(api(u.path, q, q))
+            self._json(api(u.path, q, q, who))
         except Exception as e:
             self._json(self._err(e), 400)
 
     def do_POST(self):
         u = urlparse(self.path)
-        if not self._gate(u.path):
+        who = self._gate(u.path)
+        if who is None:
             return
         try:
             n = int(self.headers.get("Content-Length") or 0)
@@ -190,10 +286,12 @@ class H(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(n) or b"{}")
             if not isinstance(body, dict):
                 raise ValueError("body must be a JSON object")
-        except ValueError as e:
-            return self._json({"error": f"invalid JSON: {e}"}, 400)
+        except (ValueError, RecursionError) as e:
+            return self._json({"error": f"invalid JSON: {type(e).__name__}"}, 400)
+        if who["kind"] == "admin" and "session_id" not in who and body.get("by"):
+            who["by"] = str(body["by"])[:40]          # admin CLI may label itself; agents never can (see _identify)
         try:
-            self._json(api(u.path, body, {}))
+            self._json(api(u.path, body, {}, who))
         except Exception as e:
             self._json(self._err(e), 400)
 

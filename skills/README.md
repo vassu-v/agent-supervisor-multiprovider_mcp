@@ -4,7 +4,7 @@ Two plain-markdown skills, written so any agent can read, follow and **edit** th
 
 | Skill | Teaches an agent to | Read it when |
 |---|---|---|
-| [`switchyard-use/`](switchyard-use/SKILL.md) | Run the fleet: route a task, spawn agents, watch, steer, interrupt, stop, handle escalations, verify results | The daemon is already running and you need to delegate work |
+| [`switchyard-use/`](switchyard-use/SKILL.md) | Run the fleet: route a task, spawn agents, watch, steer, interrupt, stop, handle escalations, verify results, announce, ask, answer and read the shared board | The daemon is already running and you need to delegate work |
 | [`switchyard-setup/`](switchyard-setup/SKILL.md) | Install and configure it: start the daemon, connect providers, add the MCP bridge, tune the policy, add a provider | Nothing is set up yet, or something is not working |
 
 ## Installing a skill

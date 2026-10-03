@@ -40,6 +40,11 @@ class CodexAdapter(Adapter):
         self._killed = False
 
     # ---- lifecycle ------------------------------------------------
+    def _child_env(self):
+        env = dict(os.environ)
+        env.update({str(k): str(v) for k, v in (self.opts.get("env") or {}).items()})
+        return env
+
     def start(self):
         cmd = self.opts.get("command")
         if cmd is None:
@@ -48,7 +53,8 @@ class CodexAdapter(Adapter):
             cmd = [cmd]
         self.proc = subprocess.Popen(
             list(cmd), cwd=self.cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, text=True, encoding="utf-8", bufsize=1)
+            stderr=subprocess.PIPE, text=True, encoding="utf-8", bufsize=1,
+            env=self._child_env())
         threading.Thread(target=self._reader, daemon=True).start()
         threading.Thread(target=self._drain_err, daemon=True).start()
         try:
@@ -244,6 +250,12 @@ class CodexAdapter(Adapter):
     def _input(text):
         return [{"type": "text", "text": text}]
 
+    def _turn_params(self, text):
+        params = {"threadId": self.session_id, "input": self._input(text)}
+        if self.opts.get("effort"):                   # per-turn field (also applies to later turns); no new thread needed
+            params["effort"] = self.opts["effort"]
+        return params
+
     def _start_turn(self, text):
         with self._lock:
             self._busy = True
@@ -251,7 +263,7 @@ class CodexAdapter(Adapter):
             self._text = []
         self.emit({"type": "status", "state": "busy"})
         try:
-            r = self._request("turn/start", {"threadId": self.session_id, "input": self._input(text)})
+            r = self._request("turn/start", self._turn_params(text))
             with self._lock:
                 tid = (r.get("turn") or {}).get("id")
                 if tid and self._busy:

@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Switchyard Yard Mockup</title>
+<style>
+/* ===== tokens.css (inlined verbatim) ===== */
+/* Switchyard design tokens — self-contained, no external requests.
+   Theme: dark (brand navy) and light. Resolution order:
+   1. :root defaults = light
+   2. @media (prefers-color-scheme: dark) unless [data-theme="light"]
+   3. [data-theme="dark"] / [data-theme="light"] explicit override
+   Density: [data-density="compact"] on any ancestor.
+   Contrast ratios (WCAG 2.x) are listed in visual-direction.md; text >= 4.5:1, marks >= 3:1. */
+
+:root {
+  /* ---------- type ---------- */
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Cascadia Code", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --fs-11: 11px;   /* micro: chip labels, axis ticks */
+  --fs-12: 12px;   /* meta, paths, timestamps */
+  --fs-13: 13px;   /* body / rows */
+  --fs-15: 15px;   /* yard header name */
+  --fs-18: 18px;   /* page title */
+  --fs-24: 24px;   /* empty-state headline only */
+  --lh-tight: 1.25;
+  --lh-body: 1.45;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --tracking-caps: 0.06em; /* small-caps section labels */
+
+  /* ---------- space (4px base) ---------- */
+  --sp-1: 2px;
+  --sp-2: 4px;
+  --sp-3: 8px;
+  --sp-4: 12px;
+  --sp-5: 16px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 48px;
+  --gutter-page: 16px;       /* min side gutter, also on phones */
+  --rail-pitch: 16px;        /* horizontal distance between tree depths */
+  --rail-pitch-narrow: 11px; /* <= 560px */
+  --row-h: 48px;             /* comfortable agent row */
+  --row-h-compact: 28px;
+
+  /* ---------- shape & line ---------- */
+  --radius-1: 3px;   /* chips, path tags */
+  --radius-2: 6px;   /* buttons, inputs, posts */
+  --radius-3: 10px;  /* yard panels, escalation card */
+  --line-hair: 1px;  /* dividers */
+  --line-rail: 2px;  /* tree / track lines */
+  --line-occupied: 4px; /* busy "train" block on the platform */
+  --focus-ring: 2px;
+
+  /* ---------- motion ---------- */
+  --dur-instant: 80ms;   /* hover, press */
+  --dur-quick: 160ms;    /* status crossfade, chip toggle */
+  --dur-medium: 280ms;   /* panel/escalation enter */
+  --dur-travel: 640ms;   /* a message travelling along the rails */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);      /* M3 standard */
+  --ease-enter: cubic-bezier(0.05, 0.7, 0.1, 1);    /* M3 emphasized decelerate */
+  --ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);     /* M3 emphasized accelerate */
+  --ease-travel: cubic-bezier(0.45, 0, 0.2, 1);     /* train: pull away, coast in */
+
+  /* ---------- colour: LIGHT (default) ---------- */
+  --c-bg: #f5f7fb;
+  --c-surface: #ffffff;
+  --c-surface-2: #eaeef6;      /* hover row, header band */
+  --c-surface-sunk: #eef1f7;   /* inputs, code */
+  --c-text: #0e1630;           /* 16.65 on bg */
+  --c-text-muted: #46557a;     /* 6.89 on bg */
+  --c-text-faint: #5d6b8f;     /* 4.94 on bg — min for meta text */
+  --c-line: #d5dbe8;           /* decorative dividers only (non-meaningful) */
+  --c-rail: #6f7d9e;           /* tree/track lines, 3.84 on bg (>=3 graphics) */
+  --c-rail-hollow: #b7c0d4;    /* inside of a hollow (dead) siding */
+  --c-focus: #1d4ed8;
+
+  /* status (never colour alone: each has a glyph + word) */
+  --c-busy: #b9650a;           /* occupied block, 3.97 on bg */
+  --c-busy-text: #9a4a07;
+  --c-busy-tint: #fff4e0;
+  --c-idle: #6f7d9e;           /* hollow ring = rail colour */
+  --c-dead: #8b95ad;           /* decorative; dead rows also say "done"/"error" */
+  --c-danger: #b91c1c;         /* escalation, error, signal at danger: 6.03 on bg */
+  --c-danger-tint: #fdecec;
+  --c-on-danger: #ffffff;      /* 6.47 on danger */
+
+  /* brand */
+  --c-amber: #f59e0b;          /* the "task": wordmark, travelling message dot */
+  --c-on-amber: #1b1303;       /* 8.57 on amber */
+  --c-navy: #0b1020;
+
+  /* providers: identity only, never status. Pair with shape + 2-letter code */
+  --c-agy: #147a3a;            /* 5.05 on bg  — circle  AG */
+  --c-claude: #bd3f0c;         /* 5.05 on bg  — square  CL */
+  --c-opencode: #1d4ed8;       /* 6.25 on bg  — triangle OC */
+  --c-codex: #7e22ce;          /* 6.51 on bg  — diamond CX */
+
+  /* board lanes: identity of the lane, carried by a 3px rule + label */
+  --c-lane-ann: #147a3a;       /* green — announcements */
+  --c-lane-ann-tint: #eaf6ee;  /* text on tint 16.08 */
+  --c-lane-q: #be185d;         /* pink — questions, 5.63 on bg */
+  --c-lane-q-tint: #fbeaf2;    /* text on tint 15.43 */
+
+  --shadow-pop: 0 1px 2px rgba(14, 22, 48, .08), 0 8px 24px rgba(14, 22, 48, .10);
+  color-scheme: light;
+}
+
+/* ---------- colour: DARK (brand navy) ---------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --c-bg: #0b1020;
+    --c-surface: #111a33;
+    --c-surface-2: #18223f;
+    --c-surface-sunk: #0e1529;
+    --c-text: #e8ecf8;         /* 16.03 on bg */
+    --c-text-muted: #a3b2d6;   /* 8.92 */
+    --c-text-faint: #8a9bc4;   /* 6.82 */
+    --c-line: #222d4a;
+    --c-rail: #5a6d9c;         /* 3.70 */
+    --c-rail-hollow: #1a2440;
+    --c-focus: #8fb4ff;
+    --c-busy: #f59e0b;         /* 8.82 */
+    --c-busy-text: #f5b445;
+    --c-busy-tint: #2a2210;
+    --c-idle: #5a6d9c;
+    --c-dead: #46557e;
+    --c-danger: #f87171;       /* 6.84 */
+    --c-danger-tint: #3a1518;
+    --c-on-danger: #1b0606;
+    --c-agy: #4ade80;          /* 10.86 */
+    --c-claude: #fb923c;       /* 8.37 */
+    --c-opencode: #60a5fa;     /* 7.45 */
+    --c-codex: #c084fc;        /* 7.17 */
+    --c-lane-ann: #4ade80;
+    --c-lane-ann-tint: #0f2a22; /* text on tint 12.94 */
+    --c-lane-q: #f472b6;        /* 7.15 */
+    --c-lane-q-tint: #2b1428;   /* text on tint 14.42 */
+    --shadow-pop: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px rgba(0, 0, 0, .45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --c-bg: #0b1020;
+  --c-surface: #111a33;
+  --c-surface-2: #18223f;
+  --c-surface-sunk: #0e1529;
+  --c-text: #e8ecf8;
+  --c-text-muted: #a3b2d6;
+  --c-text-faint: #8a9bc4;
+  --c-line: #222d4a;
+  --c-rail: #5a6d9c;
+  --c-rail-hollow: #1a2440;
+  --c-focus: #8fb4ff;
+  --c-busy: #f59e0b;
+  --c-busy-text: #f5b445;
+  --c-busy-tint: #2a2210;
+  --c-idle: #5a6d9c;
+  --c-dead: #46557e;
+  --c-danger: #f87171;
+  --c-danger-tint: #3a1518;
+  --c-on-danger: #1b0606;
+  --c-agy: #4ade80;
+  --c-claude: #fb923c;
+  --c-opencode: #60a5fa;
+  --c-codex: #c084fc;
+  --c-lane-ann: #4ade80;
+  --c-lane-ann-tint: #0f2a22;
+  --c-lane-q: #f472b6;
+  --c-lane-q-tint: #2b1428;
+  --shadow-pop: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px rgba(0, 0, 0, .45);
+  color-scheme: dark;
+}
+
+/* ---------- density ---------- */
+[data-density="compact"] {
+  --row-h: var(--row-h-compact);
+  --fs-13: 12px;
+  --sp-4: 8px;
+  --sp-5: 12px;
+}
+
+/* ---------- reduced motion: keep fades <=120ms, drop travel/translate ---------- */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-quick: 1ms;
+    --dur-medium: 120ms;   /* opacity-only fades are allowed */
+    --dur-travel: 0ms;     /* replaced by a static 1.2s highlight of sender+receiver */
+  }
+}
+
+/* ===== mockup styles ===== */
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--c-bg);color:var(--c-text);font:var(--fw-regular) var(--fs-13)/var(--lh-body) var(--font-ui);-webkit-font-smoothing:antialiased}
+.page{max-width:1440px;margin:0 auto;padding:var(--sp-5) var(--gutter-page) var(--sp-8)}
+.mono{font-family:var(--font-mono)}
+.muted{color:var(--c-text-muted)}.faint{color:var(--c-text-faint)}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+svg.i{width:12px;height:12px;flex:none;vertical-align:-2px}
+button{font:inherit;color:inherit;background:transparent;border:var(--line-hair) solid var(--c-line);border-radius:var(--radius-2);padding:3px 10px;cursor:pointer;transition:background var(--dur-instant) var(--ease-standard),border-color var(--dur-instant) var(--ease-standard)}
+button:hover{background:var(--c-surface-2);border-color:var(--c-rail)}
+:focus-visible{outline:var(--focus-ring) solid var(--c-focus);outline-offset:2px}
+input{font:inherit;color:var(--c-text);background:var(--c-surface-sunk);border:var(--line-hair) solid var(--c-line);border-radius:var(--radius-2);padding:4px 8px;min-width:0}
+input::placeholder{color:var(--c-text-faint)}
+
+/* ---- top bar ---- */
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-3) var(--sp-5);margin-bottom:var(--sp-4)}
+.brand{display:flex;align-items:center;gap:var(--sp-3)}
+.brand h1{font-size:var(--fs-18);font-weight:var(--fw-bold);margin:0;letter-spacing:.01em}
+.brand svg{width:28px;height:20px}
+.meta{color:var(--c-text-muted);font-size:var(--fs-12)}
+.meta b{color:var(--c-text);font-weight:var(--fw-semibold)}
+.sp{flex:1}
+.provs{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.prov{display:flex;align-items:center;gap:6px;border:var(--line-hair) solid var(--c-line);background:var(--c-surface);border-radius:var(--radius-2);padding:3px 6px 3px 8px;font-size:var(--fs-12)}
+.prov .nm{font-weight:var(--fw-semibold)}
+.prov.off{opacity:.62}
+.prov.off .nm{text-decoration:line-through;text-decoration-thickness:1px}
+.tog{width:26px;height:14px;border-radius:7px;border:var(--line-hair) solid var(--c-rail);background:var(--c-surface-sunk);padding:0;position:relative}
+.tog::after{content:"";position:absolute;top:2px;left:2px;width:8px;height:8px;border-radius:50%;background:var(--c-rail);transition:transform var(--dur-quick) var(--ease-standard)}
+.tog[aria-checked="true"]{background:var(--c-text)}
+.tog[aria-checked="true"]::after{transform:translateX(12px);background:var(--c-bg)}
+.ctl{display:flex;gap:var(--sp-2)}
+.ctl button{font-size:var(--fs-12);padding:3px 8px}
+
+/* provider identity: colour + shape + name, never status */
+.p-agy{color:var(--c-agy)}.p-claude{color:var(--c-claude)}.p-opencode{color:var(--c-opencode)}.p-codex{color:var(--c-codex)}
+
+/* ---- escalation: the signal at danger ---- */
+.signal{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:var(--sp-3) var(--sp-4);align-items:center;background:var(--c-danger-tint);border:var(--line-hair) solid var(--c-danger);border-left-width:4px;border-radius:var(--radius-3);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5)}
+.signal .head{width:22px;height:34px;color:var(--c-danger)}
+.signal .t1{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.signal .t1 b{font-weight:var(--fw-semibold)}
+.signal .rule{font:var(--fs-11)/1.4 var(--font-mono);color:var(--c-danger);border:var(--line-hair) solid currentColor;border-radius:var(--radius-1);padding:0 5px;text-transform:uppercase;letter-spacing:var(--tracking-caps)}
+.signal pre{margin:6px 0 0;font:var(--fs-12)/1.5 var(--font-mono);background:var(--c-surface);border:var(--line-hair) solid var(--c-line);border-radius:var(--radius-2);padding:6px 10px;white-space:pre-wrap;word-break:break-word}
+.signal .acts{display:flex;flex-direction:column;align-items:stretch;gap:6px;min-width:200px}
+.signal .acts button{white-space:nowrap}
+.signal .acts .row2{display:flex;gap:6px}
+.signal .acts button{flex:1;font-weight:var(--fw-semibold)}
+.btn-deny{background:var(--c-danger);border-color:var(--c-danger);color:var(--c-on-danger)}
+.btn-deny:hover{background:var(--c-danger);filter:brightness(1.08)}
+.fuse{height:4px;border-radius:2px;background:var(--c-surface);overflow:hidden;border:var(--line-hair) solid var(--c-line)}
+.fuse i{display:block;height:100%;width:88%;background:var(--c-danger)}
+.fuse-l{font-size:var(--fs-11);color:var(--c-text-muted);display:flex;justify-content:space-between}
+.signal.enter{animation:sig-in var(--dur-medium) var(--ease-enter) both}
+@keyframes sig-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.signal.enter .head .lamp{animation:lamp 480ms var(--ease-standard) 2 both}
+@keyframes lamp{50%{opacity:.25}}
+
+/* ---- tabs ---- */
+.tabs{display:flex;gap:2px;border-bottom:var(--line-hair) solid var(--c-line);margin-bottom:var(--sp-5);overflow-x:auto}
+.tab{border:0;border-radius:0;border-bottom:2px solid transparent;padding:6px 12px;color:var(--c-text-muted);font-weight:var(--fw-medium);white-space:nowrap}
+.tab:hover{background:transparent;color:var(--c-text)}
+.tab[aria-selected="true"]{color:var(--c-text);border-bottom-color:var(--c-amber)}
+.tab .n{font:var(--fs-11) var(--font-mono);color:var(--c-text-faint);margin-left:4px}
+
+/* ---- yard ---- */
+.yard{background:var(--c-surface);border:var(--line-hair) solid var(--c-line);border-radius:var(--radius-3);margin-bottom:var(--sp-6);overflow:hidden}
+.yard-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px var(--sp-4);padding:var(--sp-4) var(--sp-5);border-bottom:var(--line-hair) solid var(--c-line);background:linear-gradient(var(--c-surface-2),var(--c-surface))}
+.yard-h h2{margin:0;font-size:var(--fs-15);font-weight:var(--fw-bold);display:flex;align-items:center;gap:8px}
+.yard-h h2 svg{width:16px;height:16px;color:var(--c-text-muted)}
+.yard-h .path{font:var(--fs-12) var(--font-mono);color:var(--c-text-muted)}
+.yard-h .br{font:var(--fs-12) var(--font-mono);color:var(--c-text-faint)}
+.counts{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:var(--fs-12);color:var(--c-text-muted)}
+.counts b{color:var(--c-text);font-variant-numeric:tabular-nums}
+.counts .warn b,.counts .warn{color:var(--c-danger)}
+.clients{display:flex;gap:4px;margin-left:auto}
+.client{font:var(--fs-11) var(--font-mono);border:var(--line-hair) solid var(--c-line);border-radius:var(--radius-1);padding:0 5px;color:var(--c-text-muted);display:flex;align-items:center;gap:4px}
+.client::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c-text-muted)}
+.yard-b{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px)}
+.rows{position:relative;padding:var(--sp-2) 0;min-width:0}
+.colh{display:grid;grid-template-columns:var(--rail-w,72px) minmax(0,1fr) var(--pm-w,168px) 104px 92px 46px;gap:0 var(--sp-4);padding:0 var(--sp-5) 2px 0;font-size:var(--fs-11);color:var(--c-text-faint);text-transform:uppercase;letter-spacing:var(--tracking-caps)}
+.colh span:first-child{grid-column:2}
+.colh .r{text-align:right}
+
+/* ---- agent row ---- */
+.row{position:relative;display:grid;grid-template-columns:var(--rail-w,72px) minmax(0,1fr) var(--pm-w,168px) 104px 92px 46px;gap:0 var(--sp-4);align-items:center;min-height:var(--row-h);padding:0 var(--sp-5) 0 0;cursor:pointer;transition:background var(--dur-instant) var(--ease-standard)}
+.row:hover{background:var(--c-surface-2)}
+.row[aria-selected="true"]{background:var(--c-surface-2);box-shadow:inset 3px 0 0 var(--c-text)}
+.row.hl{background:var(--c-surface-2)}
+.row.woken{animation:woken 1200ms var(--ease-standard)}
+@keyframes woken{0%,40%{background:var(--c-busy-tint)}100%{background:transparent}}
+.rail{position:absolute;left:0;top:0;height:100%;overflow:visible;pointer-events:none}
+.who{min-width:0;padding:5px 0}
+.l1{display:flex;align-items:center;gap:8px;min-width:0}
+.aid{white-space:nowrap;font-weight:var(--fw-semibold);font-family:var(--font-mono);font-size:var(--fs-13)}
+.st{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-11);font-weight:var(--fw-semibold);letter-spacing:.02em;white-space:nowrap}
+.st.busy{color:var(--c-busy-text)}
+.st.idle{color:var(--c-text-muted)}
+.st.dead{color:var(--c-text-faint)}
+.st.err,.st.wait{color:var(--c-danger)}
+.goal{color:var(--c-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:var(--fs-12)}
+.paths{display:inline-flex;gap:4px;margin-left:6px}
+.pt{font:var(--fs-11) var(--font-mono);color:var(--c-text-muted);background:var(--c-surface-sunk);border:var(--line-hair) solid var(--c-line);border-radius:var(--radius-1);padding:0 4px}
+.flag{font-size:var(--fs-11);display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+.flag.q{color:var(--c-lane-q)}
+.flag.up{color:var(--c-text-faint)}
+.row.dead .aid,.row.dead .goal{color:var(--c-text-faint)}
+.row.dead .aid{text-decoration:line-through;text-decoration-color:var(--c-dead)}
+
+/* provider + model chip */
+.pm{display:flex;flex-direction:column;gap:1px;min-width:0;font-size:var(--fs-12)}
+.pm .p{display:flex;align-items:center;gap:5px;font-weight:var(--fw-semibold)}
+.pm .m{display:flex;align-items:center;gap:6px;font:var(--fs-11) var(--font-mono);color:var(--c-text-muted);white-space:nowrap;overflow:hidden}
+.eff{display:inline-flex;gap:1.5px;align-items:flex-end}
+.eff i{width:3px;background:var(--c-rail);opacity:.35;border-radius:1px}
+.eff i:nth-child(1){height:4px}.eff i:nth-child(2){height:6px}.eff i:nth-child(3){height:8px}.eff i:nth-child(4){height:10px}
+.eff i.on{opacity:1;background:var(--c-text-muted)}
+
+/* timeline + tokens */
+.tl svg{display:block;width:104px;height:12px}
+.tok{display:flex;align-items:flex-end;gap:6px;justify-content:flex-end}
+.tok svg{width:48px;height:16px;display:block}
+.tok .v{font:var(--fs-12) var(--font-mono);font-variant-numeric:tabular-nums;color:var(--c-text);min-width:36px;text-align:right}
+.age{font:var(--fs-11) var(--font-mono);color:var(--c-text-faint);text-align:right}
+.tl-busy{fill:var(--c-busy)}.tl-idle{fill:var(--c-rail);opacity:.35}.tl-wait{fill:var(--c-danger)}.tl-now{stroke:var(--c-text);stroke-width:1.5}
+.sb{fill:var(--c-rail)}.sb.last{fill:var(--c-text)}
+
+/* rails (drawn by JS from data-*) */
+.r-line{stroke:var(--c-rail);stroke-width:var(--line-rail);fill:none;stroke-linecap:round}
+.r-hollow-o{stroke:var(--c-rail);stroke-width:7;fill:none}
+.r-hollow-i{stroke:var(--c-surface);stroke-width:3.5;fill:none}
+.row:hover .r-hollow-i,.row[aria-selected="true"] .r-hollow-i,.row.hl .r-hollow-i{stroke:var(--c-surface-2)}
+.r-occ{fill:var(--c-busy)}
+.r-node-busy{fill:var(--c-busy);stroke:var(--c-surface);stroke-width:2}
+.r-node-idle{fill:var(--c-surface);stroke:var(--c-rail);stroke-width:2}
+.r-stop{fill:var(--c-rail)}
+.r-sig{fill:var(--c-danger);stroke:var(--c-surface);stroke-width:1.5}
+.r-sigpost{stroke:var(--c-danger);stroke-width:2}
+.r-q{fill:var(--c-lane-q)}
+.travel{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.travel circle{fill:var(--c-amber);stroke:var(--c-navy);stroke-width:2}
+
+/* ---- board (per yard) ---- */
+.board{border-left:var(--line-hair) solid var(--c-line);padding:var(--sp-4) var(--sp-5);display:flex;flex-direction:column;gap:var(--sp-4);min-width:0}
+.lane-h{display:flex;align-items:center;gap:6px;font-size:var(--fs-11);font-weight:var(--fw-semibold);text-transform:uppercase;letter-spacing:var(--tracking-caps);color:var(--c-text-muted);margin-bottom:6px}
+.lane-h .sw{width:10px;height:10px;border-radius:2px}
+.lane-h .c{font-family:var(--font-mono);color:var(--c-text-faint);font-weight:var(--fw-regular)}
+.lane-ann .sw{background:var(--c-lane-ann)}
+.lane-q .sw{background:var(--c-lane-q);transform:rotate(45deg) scale(.85)}
+.post{position:relative;border-radius:var(--radius-2);padding:7px 10px 8px 12px;margin-bottom:6px;border:var(--line-hair) solid transparent;cursor:default}
+.post::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:3px;border-radius:2px}
+.lane-ann .post{background:var(--c-lane-ann-tint)}
+.lane-ann .post::before{background:var(--c-lane-ann)}
+.lane-q .post{background:var(--c-lane-q-tint)}
+.lane-q .post::before{background:var(--c-lane-q)}
+.post[data-to]{cursor:pointer}
+.post:hover{border-color:var(--c-rail)}
+.post .h{display:flex;align-items:center;gap:6px;font-size:var(--fs-12);color:var(--c-text-muted);flex-wrap:wrap}
+.post .h .snd{font-family:var(--font-mono);color:var(--c-text);font-weight:var(--fw-semibold)}
+.kind{display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-11);font-weight:var(--fw-semibold);color:var(--c-text);text-transform:lowercase}
+.post .tx{margin:3px 0 0;font-size:var(--fs-13);line-height:1.4;word-break:break-word}
+.post .ft{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:5px}
+.post .ft .wk{font-size:var(--fs-11);color:var(--c-text-muted);display:inline-flex;align-items:center;gap:3px}
+.stale{font-size:var(--fs-11);font-weight:var(--fw-semibold);color:var(--c-lane-q);border:var(--line-hair) dashed currentColor;border-radius:var(--radius-1);padding:0 4px}
+.lane-q .post.open{border-style:solid;border-color:var(--c-lane-q)}
+.ans{display:flex;gap:6px;margin-top:7px}
+.ans input{flex:1}
+.post.answered{background:transparent;border:var(--line-hair) dashed var(--c-line);padding-top:5px;padding-bottom:5px}
+.post.answered .tx{color:var(--c-text-muted);font-size:var(--fs-12)}
+.act{font-size:var(--fs-12);color:var(--c-text-faint);border-top:var(--line-hair) solid var(--c-line);padding-top:var(--sp-3);display:flex;flex-direction:column;gap:2px}
+.act .ln{font-family:var(--font-mono);font-size:var(--fs-11)}
+.act .ln.e{color:var(--c-danger)}
+.compose{display:flex;gap:6px}
+.compose input{flex:1}
+
+/* ---- key (legend) ---- */
+.key{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:var(--fs-12);color:var(--c-text-muted);border-top:var(--line-hair) solid var(--c-line);padding-top:var(--sp-4)}
+.key span{display:inline-flex;align-items:center;gap:6px}
+.key svg.k{width:34px;height:14px}
+.key b{color:var(--c-text);font-weight:var(--fw-semibold);margin-right:2px}
+
+/* ---- density: compact ---- */
+[data-density="compact"]{--pm-w:236px}
+[data-density="compact"] .goal-wrap{display:none}
+[data-density="compact"] .who{padding:2px 0}
+[data-density="compact"] .pm{flex-direction:row;align-items:center;gap:8px}
+[data-density="compact"] .post .tx{font-size:var(--fs-12)}
+
+/* ---- responsive ---- */
+@media (max-width:1100px){
+  .yard-b{grid-template-columns:1fr}
+  .board{border-left:0;border-top:var(--line-hair) solid var(--c-line)}
+  .board{display:grid;grid-template-columns:1fr 1fr;align-items:start}
+  .board .compose,.board .act{grid-column:1/-1}
+}
+@media (max-width:760px){
+  .row,.colh{grid-template-columns:var(--rail-w,72px) minmax(0,1fr) 128px 64px}
+  .tl,.colh .c-tl,.age,.colh .c-age{display:none}
+  .tok svg{display:none}
+  .board{display:flex}
+}
+@media (max-width:560px){
+  .page{padding-top:var(--sp-4)}
+  .colh{display:none}
+  .row{grid-template-columns:var(--rail-w,56px) minmax(0,1fr) auto;padding-right:var(--sp-4);align-items:start}
+  .who{padding:7px 0 6px}
+  .pm{padding-top:8px;align-items:flex-end;text-align:right}
+  .pm .m{justify-content:flex-end}
+  .tok{display:none}
+  .goal{white-space:normal}
+  .l1{flex-wrap:wrap;row-gap:0}
+  .pm .m{flex-wrap:wrap;white-space:normal;overflow:visible;column-gap:4px}
+  .paths{display:flex;flex-wrap:wrap;margin:3px 0 0}
+  .signal{grid-template-columns:auto minmax(0,1fr);padding:var(--sp-4)}
+  .signal .acts{grid-column:1/-1}
+  .yard-h{padding:var(--sp-4)}
+  .clients{margin-left:0}
+  .board{padding:var(--sp-4)}
+  .top .sp{display:none}
+  .meta{width:100%;order:2}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:1ms!important;animation-iteration-count:1!important;transition-duration:1ms!important}
+}
+</style>
+</head>
+<body>
+<!-- glyph library: one stroke weight, 12px grid, currentColor -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="g-agy" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="currentColor"/></symbol>
+  <symbol id="g-claude" viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" rx="1" fill="currentColor"/></symbol>
+  <symbol id="g-opencode" viewBox="0 0 12 12"><path d="M6 1 11.2 10.5H.8Z" fill="currentColor"/></symbol>
+  <symbol id="g-codex" viewBox="0 0 12 12"><path d="M6 .6 11.4 6 6 11.4.6 6Z" fill="currentColor"/></symbol>
+  <symbol id="s-busy" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" fill="currentColor"/></symbol>
+  <symbol id="s-idle" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="s-dead" viewBox="0 0 12 12"><path d="M3 3l6 6M9 3 3 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="s-err" viewBox="0 0 12 12"><path d="M6 1 11.3 10.5H.7Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M6 4.5v2.6M6 8.7v.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="s-wait" viewBox="0 0 12 12"><circle cx="6" cy="4.5" r="3.5" fill="currentColor"/><path d="M6 8v4" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="k-done" viewBox="0 0 12 12"><path d="M2 6.5 5 9.2 10 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="k-started" viewBox="0 0 12 12"><path d="M3.5 2v8L10 6Z" fill="currentColor"/></symbol>
+  <symbol id="k-info" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6 5.4v3.2M6 3.4v.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="k-q" viewBox="0 0 12 12"><path d="M4 4.3a2 2 0 1 1 2.8 1.8c-.6.3-.8.6-.8 1.3M6 9.6v.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="k-up" viewBox="0 0 12 12"><path d="M6 10V2.5M3 5.5l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="k-yard" viewBox="0 0 16 16"><path d="M1 12h14M1 12c4 0 5-6 9-6h5M1 12c4 0 6-3 8-3h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+</svg>
+
+<div class="page" id="page">
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 28 20" aria-hidden="true"><path d="M2 10h8c5 0 6-6 12-6h4M10 10c5 0 6 6 12 6h4" fill="none" stroke="var(--c-rail)" stroke-width="2.4" stroke-linecap="round"/><path d="M2 10h8c5 0 6-6 12-6h4" fill="none" stroke="var(--c-amber)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="1.5 3.5"/><circle cx="10" cy="10" r="3" fill="var(--c-bg)" stroke="var(--c-amber)" stroke-width="2"/></svg>
+    <h1>Switchyard</h1>
+  </div>
+  <div class="meta"><b>9</b> agents · <b>5</b> busy · <b>1</b> waiting on you · <b>2</b> workspaces · updated 2s ago</div>
+  <div class="sp"></div>
+  <div class="provs" aria-label="Providers">
+    <div class="prov"><svg class="i p-agy"><use href="#g-agy"/></svg><span class="nm">agy</span><span class="faint">7 models</span><button class="tog" role="switch" aria-checked="true" aria-label="agy enabled"></button></div>
+    <div class="prov"><svg class="i p-claude"><use href="#g-claude"/></svg><span class="nm">claude</span><span class="faint">3 aliases</span><button class="tog" role="switch" aria-checked="true" aria-label="claude enabled"></button></div>
+    <div class="prov"><svg class="i p-opencode"><use href="#g-opencode"/></svg><span class="nm">opencode</span><span class="faint">24 models</span><button class="tog" role="switch" aria-checked="true" aria-label="opencode enabled"></button></div>
+    <div class="prov"><svg class="i p-codex"><use href="#g-codex"/></svg><span class="nm">codex</span><span class="faint">5 models</span><button class="tog" role="switch" aria-checked="true" aria-label="codex enabled"></button></div>
+  </div>
+  <div class="ctl">
+    <button id="density" aria-pressed="false">Compact</button>
+    <button id="theme">Theme: system</button>
+  </div>
+</header>
+
+<section class="signal enter" aria-label="Needs a decision" role="region">
+  <svg class="head" viewBox="0 0 22 34" aria-hidden="true"><rect x="2" y="1" width="18" height="20" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><circle class="lamp" cx="11" cy="11" r="5.5" fill="currentColor"/><path d="M11 21v12" stroke="currentColor" stroke-width="2.5"/></svg>
+  <div>
+    <div class="t1"><span class="rule">escalate · git push</span><b class="mono">api</b><span class="muted">in <b>shop</b> wants to run</span><span class="faint">held 1m 12s</span></div>
+    <pre>git push origin feat/users-api</pre>
+  </div>
+  <div class="acts">
+    <div class="row2"><button class="btn-deny">Deny</button><button>Allow once</button></div>
+    <div class="fuse" aria-hidden="true"><i></i></div>
+    <div class="fuse-l"><span>auto-stop in 8:48</span><span>of 10:00</span></div>
+  </div>
+</section>
+
+<nav class="tabs" role="tablist" aria-label="Workspaces">
+  <button class="tab" role="tab" aria-selected="true">All<span class="n">9</span></button>
+  <button class="tab" role="tab" aria-selected="false">shop<span class="n">5</span></button>
+  <button class="tab" role="tab" aria-selected="false">billing-svc<span class="n">4</span></button>
+</nav>
+
+<!-- ================= YARD 1 ================= -->
+<section class="yard" aria-label="Workspace shop">
+  <header class="yard-h">
+    <h2><svg aria-hidden="true"><use href="#k-yard"/></svg>shop</h2>
+    <span class="path">D:\code\shop</span><span class="br">⎇ main</span>
+    <div class="counts"><span><b>5</b> agents</span><span><b>3</b> busy</span><span class="warn"><b>1</b> waiting on you</span><span><b>1</b> open question</span><span><b>229k</b> tokens</span></div>
+    <div class="clients" aria-label="Attached clients"><span class="client">claude-code</span><span class="client">dashboard</span></div>
+  </header>
+  <div class="yard-b">
+    <div class="rows" role="tree" aria-label="Agents in shop">
+      <div class="colh" aria-hidden="true"><span>agent · goal</span><span>provider · model</span><span class="c-tl">last 30 min</span><span class="r">tokens/turn</span><span class="r c-age">turns</span></div>
+
+      <div class="row busy" role="treeitem" aria-level="1" aria-selected="false" data-id="lead" data-depth="0" data-kids="1" data-last="1" data-cont="" data-status="busy" tabindex="0">
+        <div></div>
+        <div class="who"><div class="l1"><span class="aid">lead</span><span class="st busy"><svg class="i"><use href="#s-busy"/></svg>busy 4m</span></div>
+          <div class="goal goal-wrap">Users API: split the work across db / api / docs, then verify</div></div>
+        <div class="pm"><span class="p p-claude"><svg class="i"><use href="#g-claude"/></svg>claude</span><span class="m">opus <span class="eff" title="effort: high"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>high</span></div>
+        <div class="tl"><svg viewBox="0 0 104 12" aria-label="busy 18 of the last 30 minutes"><rect class="tl-busy" x="0" y="3" width="22" height="6" rx="1"/><rect class="tl-idle" x="23" y="5" width="38" height="2"/><rect class="tl-busy" x="62" y="3" width="10" height="6" rx="1"/><rect class="tl-idle" x="73" y="5" width="16" height="2"/><rect class="tl-busy" x="90" y="3" width="12" height="6" rx="1"/><path class="tl-now" d="M103 0v12"/></svg></div>
+        <div class="tok"><svg viewBox="0 0 48 16" aria-hidden="true"><rect class="sb" x="0" y="9" width="3" height="7"/><rect class="sb" x="4" y="6" width="3" height="10"/><rect class="sb" x="8" y="11" width="3" height="5"/><rect class="sb" x="12" y="4" width="3" height="12"/><rect class="sb" x="16" y="8" width="3" height="8"/><rect class="sb" x="20" y="12" width="3" height="4"/><rect class="sb" x="24" y="10" width="3" height="6"/><rect class="sb" x="28" y="2" width="3" height="14"/><rect class="sb" x="32" y="7" width="3" height="9"/><rect class="sb" x="36" y="9" width="3" height="7"/><rect class="sb" x="40" y="5" width="3" height="11"/><rect class="sb last" x="44" y="0" width="3" height="16"/></svg><span class="v">118k</span></div>
+        <div class="age">14</div>
+      </div>
+
+      <div class="row dead" role="treeitem" aria-level="2" aria-selected="false" data-id="db" data-parent="lead" data-depth="1" data-kids="0" data-last="0" data-cont="" data-status="dead" tabindex="0">
+        <div></div>
+        <div class="who"><div class="l1"><span class="aid">db</span><span class="st dead"><svg class="i"><use href="#s-dead"/></svg>done 3m ago</span><span class="flag up"><svg class="i"><use href="#k-up"/></svg>woke lead</span></div>
+          <div class="goal goal-wrap">app_users table + migration<span class="paths"><span class="pt">db/001.sql</span></span></div></div>
+        <div class="pm"><span class="p p-agy"><svg class="i"><use href="#g-agy"/></svg>agy</span><span class="m">gemini-3-flash <span class="eff" title="effort: medium"><i class="on"></i><i class="on"></i><i></i><i></i></span>med</span></div>
+        <div class="tl"><svg viewBox="0 0 104 12" aria-label="busy 7 minutes then finished"><rect class="tl-idle" x="0" y="5" width="60" height="2"/><rect class="tl-busy" x="61" y="3" width="30" height="6" rx="1"/><path class="tl-now" d="M103 0v12"/></svg></div>
+        <div class="tok"><svg viewBox="0 0 48 16" aria-hidden="true"><rect class="sb" x="32" y="6" width="3" height="10"/><rect class="sb" x="36" y="3" width="3" height="13"/><rect class="sb" x="40" y="9" width="3" height="7"/><rect class="sb last" x="44" y="12" width="3" height="4"/></svg><span class="v">21k</span></div>
+        <div class="age">4</div>
+      </div>
+
+      <div class="row busy" role="treeitem" aria-level="2" aria-selected="false" data-id="api" data-parent="lead" data-depth="1" data-kids="1" data-last="0" data-cont="" data-status="wait" tabindex="0">
+        <div></div>
+        <div class="who"><div class="l1"><span class="aid">api</span><span class="st wait"><svg class="i"><use href="#s-wait"/></svg>held · git push</span></div>
+          <div class="goal goal-wrap">/users endpoints + tests<span class="paths"><span class="pt">api/users.py</span><span class="pt">tests/test_users.py</span></span></div></div>
+        <div class="pm"><span class="p p-opencode"><svg class="i"><use href="#g-opencode"/></svg>opencode</span><span class="m">qwen3-coder · free</span></div>
+        <div class="tl"><svg viewBox="0 0 104 12" aria-label="busy 9 minutes, held 1 minute"><rect class="tl-idle" x="0" y="5" width="66" height="2"/><rect class="tl-busy" x="67" y="3" width="30" height="6" rx="1"/><rect class="tl-wait" x="98" y="2" width="5" height="8" rx="1"/><path class="tl-now" d="M103 0v12"/></svg></div>
+        <div class="tok"><svg viewBox="0 0 48 16" aria-hidden="true"><rect class="sb" x="24" y="10" width="3" height="6"/><rect class="sb" x="28" y="7" width="3" height="9"/><rect class="sb" x="32" y="4" width="3" height="12"/><rect class="sb" x="36" y="8" width="3" height="8"/><rect class="sb" x="40" y="5" width="3" height="11"/><rect class="sb last" x="44" y="2" width="3" height="14"/></svg><span class="v">64k</span></div>
+        <div class="age">6</div>
+      </div>
+
+      <div class="row idle" role="treeitem" aria-level="3" aria-selected="false" data-id="api-tests" data-parent="api" data-depth="2" data-kids="0" data-last="1" data-cont="0" data-status="idle" data-q="1" tabindex="0">
+        <div></div>
+        <div class="who"><div class="l1"><span class="aid">api-tests</span><span class="st idle"><svg class="i"><use href="#s-idle"/></svg>idle</span><span class="flag q"><svg class="i"><use href="#k-q"/></svg>asked 6m</span></div>
+          <div class="goal goal-wrap">property tests for /users<span class="paths"><span class="pt">tests/props/</span></span></div></div>
+        <div class="pm"><span class="p p-agy"><svg class="i"><use href="#g-agy"/></svg>agy</span><span class="m">gemini-3-flash <span class="eff" title="effort: low"><i class="on"></i><i></i><i></i><i></i></span>low</span></div>
+        <div class="tl"><svg viewBox="0 0 104 12" aria-label="busy 4 minutes, idle 6"><rect class="tl-idle" x="0" y="5" width="76" height="2"/><rect class="tl-busy" x="77" y="3" width="12" height="6" rx="1"/><rect class="tl-idle" x="90" y="5" width="13" height="2"/><path class="tl-now" d="M103 0v12"/></svg></div>
+        <div class="tok"><svg viewBox="0 0 48 16" aria-hidden="true"><rect class="sb" x="40" y="8" width="3" height="8"/><rect class="sb last" x="44" y="11" width="3" height="5"/></svg><span class="v">6k</span></div>
+        <div class="age">2</div>
+      </div>
+
+      <div class="row busy" role="treeitem" aria-level="2" aria-selected="false" data-id="docs" data-parent="lead" data-depth="1" data-kids="0" data-last="1" data-cont="" data-status="busy" tabindex="0">
+        <div></div>
+        <div class="who"><div class="l1"><span class="aid">docs</span><span class="st busy"><svg class="i"><use href="#s-busy"/></svg>busy 1m</span></div>
+          <div class="goal goal-wrap">README + OpenAPI for /users<span class="paths"><span class="pt">docs/api.md</span></span></div></div>
+        <div class="pm"><span class="p p-codex"><svg class="i"><use href="#g-codex"/></svg>codex</span><span class="m">gpt-5-codex <span class="eff" title="effort: medium"><i class="on"></i><i class="on"></i><i></i><i></i></span>med</span></div>
+        <div class="tl"><svg viewBox="0 0 104 12" aria-label="busy 3 minutes"><rect class="tl-idle" x="0" y="5" width="92" height="2"/><rect class="tl-busy" x="93" y="3" width="10" height="6" rx="1"/><path class="tl-now" d="M103 0v12"/></svg></div>
+        <div class="tok"><svg viewBox="0 0 48 16" aria-hidden="true"><rect class="sb" x="40" y="10" width="3" height="6"/><rect class="sb last" x="44" y="4" width="3" height="12"/></svg><span class="v">20k</span></div>
+        <div class="age">2</div>
+      </div>
+    </div>
+
+    <aside class="board" aria-label="Board for shop">
+      <div class="lane-q">
+        <div class="lane-h"><span class="sw"></span>Questions<span class="c">1 open</span></div>
+        <article class="post open" data-from="api-tests" data-to="api">
+          <div class="h"><span class="kind"><svg class="i"><use href="#k-q"/></svg>question</span><span class="snd">api-tests</span><span>6m</span><span class="stale">stale · passed to api</span></div>
+          <p class="tx">Which port does the mock server use? tests/conftest.py hard-codes 8080 but api/server.py reads PORT.</p>
+          <div class="ans"><input type="text" placeholder="Answer as dashboard…" aria-label="Answer"><button>Answer</button></div>
+        </article>
+      </div>
+      <div class="lane-ann">
+        <div class="lane-h"><span class="sw"></span>Announcements<span class="c">3</span></div>
+        <article class="post" data-from="db" data-to="lead" tabindex="0" title="Show the wake-up travel">
+          <div class="h"><span class="kind"><svg class="i"><use href="#k-done"/></svg>done</span><span class="snd">db</span><svg class="i p-agy"><use href="#g-agy"/></svg><span>3m</span></div>
+          <p class="tx">app_users migration written; columns id, email, created_at.</p>
+          <div class="ft"><span class="pt">db/001.sql</span><span class="wk"><svg class="i"><use href="#k-up"/></svg>woke lead</span></div>
+        </article>
+        <article class="post" data-from="docs">
+          <div class="h"><span class="kind"><svg class="i"><use href="#k-info"/></svg>info</span><span class="snd">docs</span><svg class="i p-codex"><use href="#g-codex"/></svg><span>1m</span></div>
+          <p class="tx">Drafting OpenAPI from api/users.py; will re-read once api lands.</p>
+        </article>
+        <article class="post" data-from="lead">
+          <div class="h"><span class="kind"><svg class="i"><use href="#k-started"/></svg>started</span><span class="snd">lead</span><svg class="i p-claude"><use href="#g-claude"/></svg><span>9m</span></div>
+          <p class="tx">Split: db → schema, api → endpoints, docs → README / OpenAPI.</p>
+        </article>
+      </div>
+      <div class="compose"><input type="text" placeholder="Post to shop as dashboard…" aria-label="Post"><button>Announce</button><button>Ask</button></div>
+      <div class="act"><button style="align-self:flex-start;font-size:var(--fs-11);padding:1px 8px">Activity (14)</button></div>
+    </aside>
+  </div>
+</section>
+
+<!-- ================= YARD 2 ================= -->
+<section class="yard" aria-label="Workspace billing-svc">
+  <header class="yard-h">
+    <h2><svg aria-hidden="true"><use href="#k-yard"/></svg>billing-svc</h2>
+    <span class="path">D:\code\billing-svc</span><span class="br">⎇ fix/rounding</span>
+    <div class="counts"><span><b>4</b> agents</span><span><b>2</b> busy</span><span><b>1</b> error</span><span><b>0</b> open questions</span><span><b>141k</b> tokens</span></div>
+    <div class="clients" aria-label="Attached clients"><span class="client">opencode</span></div>
+  </header>
+  <div class="yard-b">
+    <div class="rows" role="tree" aria-label="Agents in billing-svc">
+      <div class="colh" aria-hidden="true"><span>agent · goal</span><span>provider · model</span><span class="c-tl">last 30 min</span><span class="r">tokens/turn</span><span class="r c-age">turns</span></div>
+
+      <div class="row idle" role="treeitem" aria-level="1" aria-selected="false" data-id="triage" data-depth="0" data-kids="1" data-last="1" data-cont="" data-status="idle" tabindex="0">
+        <div></div>
+        <div class="who"><div class="l1"><span class="aid">triage</span><span class="st idle"><svg class="i"><use href="#s-idle"/></svg>idle · 3 children out</span></div>
+          <div class="goal goal-wrap">Rounding bug in invoice totals: reproduce, fix, benchmark</div></div>
+        <div class="pm"><span class="p p-claude"><svg class="i"><use href="#g-claude"/></svg>claude</span><span class="m">sonnet <span class="eff" title="effort: medium"><i class="on"></i><i class="on"></i><i></i><i></i></span>med</span></div>
+        <div class="tl"><svg viewBox="0 0 104 12" aria-label="busy 8 minutes early, idle since"><rect class="tl-busy" x="0" y="3" width="28" height="6" rx="1"/><rect class="tl-idle" x="29" y="5" width="74" height="2"/><path class="tl-now" d="M103 0v12"/></svg></div>
+        <div class="tok"><svg viewBox="0 0 48 16" aria-hidden="true"><rect class="sb" x="28" y="6" width="3" height="10"/><rect class="sb" x="32" y="3" width="3" height="13"/><rect class="sb" x="36" y="9" width="3" height="7"/><rect class="sb" x="40" y="11" width="3" height="5"/><rect class="sb last" x="44" y="13" width="3" height="3"/></svg><span class="v">37k</span></div>
+        <div class="age">5</div>
+      </div>
+
+      <div class="row dead" role="treeitem" aria-level="2" aria-selected="false" data-id="repro" data-parent="triage" data-depth="1" data-kids="0" data-last="0" data-cont="" data-status="dead" tabindex="0">
+        <div></div>
+        <div class="who"><div class="l1"><span class="aid">repro</span><span class="st err"><svg class="i"><use href="#s-err"/></svg>error · exit 1</span><span class="flag up"><svg class="i"><use href="#k-up"/></svg>woke triage</span></div>
+          <div class="goal goal-wrap">minimal failing case for 0.1 + 0.2 totals<span class="paths"><span class="pt">tests/test_round.py</span></span></div></div>
+        <div class="pm"><span class="p p-opencode"><svg class="i"><use href="#g-opencode"/></svg>opencode</span><span class="m">qwen3-coder · free</span></div>
+        <div class="tl"><svg viewBox="0 0 104 12" aria-label="busy 5 minutes then error"><rect class="tl-idle" x="0" y="5" width="20" height="2"/><rect class="tl-busy" x="21" y="3" width="18" height="6" rx="1"/><rect class="tl-wait" x="40" y="2" width="3" height="8"/></svg></div>
+        <div class="tok"><svg viewBox="0 0 48 16" aria-hidden="true"><rect class="sb" x="36" y="8" width="3" height="8"/><rect class="sb" x="40" y="5" width="3" height="11"/><rect class="sb last" x="44" y="10" width="3" height="6"/></svg><span class="v">9k</span></div>
+        <div class="age">3</div>
+      </div>
+
+      <div class="row busy" role="treeitem" aria-level="2" aria-selected="false" data-id="fix-rounding" data-parent="triage" data-depth="1" data-kids="0" data-last="0" data-cont="" data-status="busy" tabindex="0">
+        <div></div>
+        <div class="who"><div class="l1"><span class="aid">fix-rounding</span><span class="st busy"><svg class="i"><use href="#s-busy"/></svg>busy 7m</span></div>
+          <div class="goal goal-wrap">switch money maths to Decimal<span class="paths"><span class="pt">billing/invoice.py</span></span></div></div>
+        <div class="pm"><span class="p p-codex"><svg class="i"><use href="#g-codex"/></svg>codex</span><span class="m">gpt-5-codex <span class="eff" title="effort: high"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>high</span></div>
+        <div class="tl"><svg viewBox="0 0 104 12" aria-label="busy 7 minutes"><rect class="tl-idle" x="0" y="5" width="78" height="2"/><rect class="tl-busy" x="79" y="3" width="24" height="6" rx="1"/><path class="tl-now" d="M103 0v12"/></svg></div>
+        <div class="tok"><svg viewBox="0 0 48 16" aria-hidden="true"><rect class="sb" x="32" y="9" width="3" height="7"/><rect class="sb" x="36" y="5" width="3" height="11"/><rect class="sb" x="40" y="2" width="3" height="14"/><rect class="sb last" x="44" y="6" width="3" height="10"/></svg><span class="v">58k</span></div>
+        <div class="age">4</div>
+      </div>
+
+      <div class="row busy" role="treeitem" aria-level="2" aria-selected="false" data-id="bench" data-parent="triage" data-depth="1" data-kids="0" data-last="1" data-cont="" data-status="busy" tabindex="0">
+        <div></div>
+        <div class="who"><div class="l1"><span class="aid">bench</span><span class="st busy"><svg class="i"><use href="#s-busy"/></svg>busy 2m</span></div>
+          <div class="goal goal-wrap">benchmark invoice totals before / after<span class="paths"><span class="pt">bench/</span></span></div></div>
+        <div class="pm"><span class="p p-agy"><svg class="i"><use href="#g-agy"/></svg>agy</span><span class="m">gemini-3-pro <span class="eff" title="effort: high"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>high</span></div>
+        <div class="tl"><svg viewBox="0 0 104 12" aria-label="busy 12 minutes"><rect class="tl-idle" x="0" y="5" width="62" height="2"/><rect class="tl-busy" x="63" y="3" width="40" height="6" rx="1"/><path class="tl-now" d="M103 0v12"/></svg></div>
+        <div class="tok"><svg viewBox="0 0 48 16" aria-hidden="true"><rect class="sb" x="28" y="11" width="3" height="5"/><rect class="sb" x="32" y="9" width="3" height="7"/><rect class="sb" x="36" y="10" width="3" height="6"/><rect class="sb" x="40" y="8" width="3" height="8"/><rect class="sb last" x="44" y="7" width="3" height="9"/></svg><span class="v">37k</span></div>
+        <div class="age">5</div>
+      </div>
+    </div>
+
+    <aside class="board" aria-label="Board for billing-svc">
+      <div class="lane-q">
+        <div class="lane-h"><span class="sw"></span>Questions<span class="c">0 open</span></div>
+        <article class="post answered" data-from="fix-rounding" data-to="triage">
+          <div class="h"><span class="kind"><svg class="i"><use href="#k-q"/></svg>answered</span><span class="snd">fix-rounding</span><span>12m</span><span>· by triage</span></div>
+          <p class="tx">Round half-even or half-up for invoice totals? → half-up, per finance spec §4.</p>
+        </article>
+      </div>
+      <div class="lane-ann">
+        <div class="lane-h"><span class="sw"></span>Announcements<span class="c">2</span></div>
+        <article class="post" data-from="bench">
+          <div class="h"><span class="kind"><svg class="i"><use href="#k-info"/></svg>info</span><span class="snd">bench</span><svg class="i p-agy"><use href="#g-agy"/></svg><span>2m</span></div>
+          <p class="tx">Baseline p50 412 ms for 10k invoices on main.</p>
+          <div class="ft"><span class="pt">bench/baseline.json</span></div>
+        </article>
+        <article class="post" data-from="fix-rounding">
+          <div class="h"><span class="kind"><svg class="i"><use href="#k-started"/></svg>started</span><span class="snd">fix-rounding</span><svg class="i p-codex"><use href="#g-codex"/></svg><span>7m</span></div>
+          <p class="tx">Taking billing/invoice.py; nobody else should edit it.</p>
+        </article>
+      </div>
+      <div class="act">
+        <span class="ln e">4m · repro stopped: error (exit 1) → woke triage</span>
+        <span class="ln">7m · spawn fix-rounding by triage</span>
+        <span class="ln">8m · spawn bench by triage</span>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<footer class="key" aria-label="Key">
+  <span><b>Key</b></span>
+  <span><svg class="k" viewBox="0 0 34 14" aria-hidden="true"><rect x="8" y="4" width="24" height="6" rx="1.5" fill="var(--c-busy)"/><circle cx="6" cy="7" r="4.5" fill="var(--c-busy)" stroke="var(--c-bg)" stroke-width="2"/></svg>busy (track occupied)</span>
+  <span><svg class="k" viewBox="0 0 34 14" aria-hidden="true"><path d="M6 7h26" stroke="var(--c-rail)" stroke-width="2"/><circle cx="6" cy="7" r="4" fill="var(--c-bg)" stroke="var(--c-rail)" stroke-width="2"/></svg>idle (route set)</span>
+  <span><svg class="k" viewBox="0 0 34 14" aria-hidden="true"><path d="M5 7h27" stroke="var(--c-rail)" stroke-width="7"/><path d="M5 7h27" stroke="var(--c-bg)" stroke-width="3.5"/><rect x="2" y="2" width="3" height="10" fill="var(--c-rail)"/></svg>finished (siding)</span>
+  <span><svg class="k" viewBox="0 0 34 14" aria-hidden="true"><rect x="2" y="4" width="20" height="6" rx="1.5" fill="var(--c-busy)"/><path d="M27 7v7" stroke="var(--c-danger)" stroke-width="2"/><circle cx="27" cy="5" r="4" fill="var(--c-danger)"/></svg>held at a signal (needs you)</span>
+  <span><svg class="i p-agy"><use href="#g-agy"/></svg>agy <svg class="i p-claude"><use href="#g-claude"/></svg>claude <svg class="i p-opencode"><use href="#g-opencode"/></svg>opencode <svg class="i p-codex"><use href="#g-codex"/></svg>codex</span>
+  <span class="faint">Click a green post with “woke …” to replay the message travelling up the track.</span>
+</footer>
+</div>
+
+<script>
+"use strict";
+(function(){
+  const root=document.documentElement;
+  const NS="http://www.w3.org/2000/svg";
+  const reduce=window.matchMedia("(prefers-reduced-motion: reduce)");
+  const el=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e};
+  const narrow=()=>window.innerWidth<=560;
+  const X=d=>(narrow()?12:18)+d*(narrow()?12:18);
+
+  /* Draw each row's slice of track from data-*: depth, last sibling, has kids, continuing ancestor lanes. */
+  function drawRails(){
+    document.querySelectorAll(".rows").forEach(rows=>{
+      const rs=[...rows.querySelectorAll(".row")];
+      const maxD=Math.max(...rs.map(r=>+r.dataset.depth));
+      const W=X(maxD)+(narrow()?18:30);
+      rows.closest(".yard").style.setProperty("--rail-w",W+"px");
+      rs.forEach(r=>{
+        r.querySelectorAll("svg.rail").forEach(s=>s.remove());
+        const h=r.offsetHeight,y=Math.min(h/2,20),d=+r.dataset.depth,xd=X(d),st=r.dataset.status;
+        const s=el("svg",{class:"rail",width:W,height:h,viewBox:`0 0 ${W} ${h}`,"aria-hidden":"true"});
+        (r.dataset.cont||"").split(",").filter(Boolean).forEach(k=>s.append(el("path",{class:"r-line",d:`M${X(+k)} 0V${h}`})));
+        if(d>0){const px=X(d-1);
+          s.append(el("path",{class:"r-line",d:r.dataset.last==="1"?`M${px} 0V${y-8}`:`M${px} 0V${h}`}));
+          s.append(el("path",{class:"r-line",d:`M${px} ${y-8}Q${px} ${y} ${px+8} ${y}H${xd}`}));}
+        if(r.dataset.kids==="1")s.append(el("path",{class:"r-line",d:`M${xd} ${y}V${h}`}));
+        const end=W-3;
+        if(st==="busy"||st==="wait"){
+          const e2=st==="wait"?end-9:end;
+          s.append(el("rect",{class:"r-occ",x:xd+4,y:y-3,width:Math.max(4,e2-xd-4),height:6,rx:1.5}));
+          if(st==="wait"){s.append(el("path",{class:"r-sigpost",d:`M${end-2} ${y-2}V${y+8}`}));s.append(el("circle",{class:"r-sig",cx:end-2,cy:y-4,r:4.5}));}
+          s.append(el("circle",{class:"r-node-busy",cx:xd,cy:y,r:5}));
+        }else if(st==="idle"){
+          s.append(el("path",{class:"r-line",d:`M${xd} ${y}H${end}`}));
+          s.append(el("circle",{class:"r-node-idle",cx:xd,cy:y,r:4.5}));
+          if(r.dataset.q)s.append(el("path",{class:"r-q",d:`M${end-5} ${y-5}l5 5-5 5-5-5Z`}));
+        }else{
+          s.append(el("path",{class:"r-hollow-o",d:`M${xd+2} ${y}H${end}`}));
+          s.append(el("path",{class:"r-hollow-i",d:`M${xd+2} ${y}H${end-1.5}`}));
+          s.append(el("rect",{class:"r-stop",x:xd-1.5,y:y-6,width:3.5,height:12,rx:1}));
+        }
+        r.prepend(s);r.dataset.y=y;
+      });
+    });
+  }
+
+  /* A message travels from child node, along its turnout, up the parent lane, into the parent node. */
+  function travel(fromId,toId){
+    const a=document.querySelector(`.row[data-id="${fromId}"]`),b=document.querySelector(`.row[data-id="${toId}"]`);
+    if(!a||!b)return;
+    const flash=()=>{[a,b].forEach(r=>{r.classList.remove("woken");void r.offsetWidth;r.classList.add("woken")})};
+    if(reduce.matches){flash();return}
+    const rows=a.closest(".rows");
+    const ya=a.offsetTop+(+a.dataset.y),yb=b.offsetTop+(+b.dataset.y);
+    const xa=X(+a.dataset.depth),xb=X(+b.dataset.depth);
+    const up=yb<ya, lane=up?xb:xa; /* wake goes up to parent lane; answers go down the asker's lane */
+    const svg=el("svg",{class:"travel","aria-hidden":"true"});const c=el("circle",{r:5,cx:0,cy:0});svg.append(c);rows.append(svg);
+    const T=(x,y)=>({transform:`translate(${x}px,${y}px)`});
+    const anim=c.animate([T(xa,ya),{...T(lane,ya),offset:.18},{...T(lane,yb),offset:.92},T(xb,yb)],
+      {duration:parseFloat(getComputedStyle(root).getPropertyValue("--dur-travel"))||640,easing:"cubic-bezier(0.45,0,0.2,1)",fill:"forwards"});
+    anim.onfinish=()=>{svg.remove();b.classList.remove("woken");void b.offsetWidth;b.classList.add("woken")};
+  }
+
+  /* selection */
+  document.addEventListener("click",ev=>{
+    const row=ev.target.closest(".row");
+    if(row){const was=row.getAttribute("aria-selected")==="true";
+      document.querySelectorAll('.row[aria-selected="true"]').forEach(r=>r.setAttribute("aria-selected","false"));
+      row.setAttribute("aria-selected",was?"false":"true");return}
+    const post=ev.target.closest(".post[data-to]");
+    if(post&&!ev.target.closest("input,button"))travel(post.dataset.from,post.dataset.to);
+    const tog=ev.target.closest(".tog");
+    if(tog){const on=tog.getAttribute("aria-checked")!=="true";tog.setAttribute("aria-checked",on);tog.closest(".prov").classList.toggle("off",!on)}
+    const tab=ev.target.closest(".tab");
+    if(tab){document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t===tab))}
+  });
+  document.addEventListener("keydown",ev=>{
+    if((ev.key==="Enter"||ev.key===" ")&&ev.target.matches(".row,.post[data-to]")){ev.preventDefault();ev.target.click()}
+  });
+  /* hovering a post lights up who sent it and who it reaches */
+  document.addEventListener("pointerover",ev=>{
+    const p=ev.target.closest(".post");document.querySelectorAll(".row.hl").forEach(r=>r.classList.remove("hl"));
+    if(p)[p.dataset.from,p.dataset.to].filter(Boolean).forEach(id=>{const r=document.querySelector(`.row[data-id="${id}"]`);if(r)r.classList.add("hl")});
+  });
+
+  /* theme + density */
+  const modes=["system","light","dark"];let mi=0;
+  document.getElementById("theme").addEventListener("click",ev=>{mi=(mi+1)%3;const m=modes[mi];
+    if(m==="system")root.removeAttribute("data-theme");else root.setAttribute("data-theme",m);ev.currentTarget.textContent="Theme: "+m;drawRails()});
+  document.getElementById("density").addEventListener("click",ev=>{const on=root.getAttribute("data-density")!=="compact";
+    if(on)root.setAttribute("data-density","compact");else root.removeAttribute("data-density");ev.currentTarget.setAttribute("aria-pressed",on);drawRails()});
+  const q=new URLSearchParams(location.search);
+  if(q.get("theme"))root.setAttribute("data-theme",q.get("theme"));
+  if(q.get("density"))root.setAttribute("data-density",q.get("density"));
+
+  let t;window.addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(drawRails,80)});
+  drawRails();
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(drawRails);
+  /* one-shot demo on load: the done post from db travels up and wakes lead. Nothing loops. */
+  if(!q.get("still"))setTimeout(()=>travel("db","lead"),900);
+})();
+</script>
+</body>
+</html>

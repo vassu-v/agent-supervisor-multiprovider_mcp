@@ -25,6 +25,9 @@ Normalised events passed to emit() (all dicts, "type" required, "ts" added by co
   {"type":"result","text":str,"ok":bool,"stop":"end_turn"|"cancelled"|"error"}    exactly one per turn
   {"type":"error","message":str}
   {"type":"session","id":str}                                            when the provider session id becomes known
+opts["env"] (optional dict of str->str, the agent identity block ORCH_URL/ORCH_TOKEN/ORCH_AGENT/ORCH_WORKSPACE/
+ORCH_PARENT): every adapter MERGES it into the child process environment (after any adapter-specific filtering, so
+these keys always win). Never log or echo its values.
 Adapters run with permission prompts OFF and must be scoped to `cwd` (spawn processes with cwd=cwd).
 Kill must kill child processes too (on Windows use `taskkill /PID <pid> /T /F`).
 """

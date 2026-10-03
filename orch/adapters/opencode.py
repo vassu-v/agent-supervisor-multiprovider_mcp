@@ -80,12 +80,17 @@ class OpenCodeAdapter(Adapter):
         return (not self._dead) and self.proc is not None and self.proc.poll() is None
 
     # ---- lifecycle
-    def start(self):
-        port = _free_port()
-        self.base = "http://127.0.0.1:%d" % port
+    def _child_env(self):
         env = dict(os.environ)
         env["OPENCODE_CONFIG_CONTENT"] = json.dumps({"permission": "allow"})
         env.pop("OPENCODE_SERVER_PASSWORD", None)
+        env.update({str(k): str(v) for k, v in (self.opts.get("env") or {}).items()})
+        return env
+
+    def start(self):
+        port = _free_port()
+        self.base = "http://127.0.0.1:%d" % port
+        env = self._child_env()
         cmd = [_find_opencode(), "serve", "--port", str(port), "--hostname", "127.0.0.1"]
         flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
         logdir = os.environ.get("TEMP", ".")
@@ -151,6 +156,8 @@ class OpenCodeAdapter(Adapter):
         if self.model and "/" in self.model:
             p, m = self.model.split("/", 1)
             body["model"] = {"providerID": p, "modelID": m}
+        if self.opts.get("effort"):                   # per-message: verified field `variant` in the prompt_async OpenAPI schema; no new session needed
+            body["variant"] = self.opts["effort"]
         try:
             self._req("POST", "/session/%s/prompt_async" % self.session_id, body)
         except Exception as e:

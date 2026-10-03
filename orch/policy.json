@@ -1,7 +1,7 @@
 {
   "_doc": "Routing + escalation policy. Edit freely; the daemon reloads it on every decision.",
   "routing": {
-    "_doc": "Candidates are 'provider:pattern', tried in order. The pattern is a glob matched against the models the provider CLI actually reports (newest version wins), or an alias such as 'sonnet'. A candidate is skipped if its provider is switched off / not installed or nothing matches, so nothing here is a hardcoded model name.",
+    "_doc": "Candidates are 'provider:pattern[@effort]', tried in order; the optional @effort (low|medium|high|xhigh|max) is the reasoning effort used when routing picks that candidate (an explicit effort in the spawn request wins). The pattern is a glob matched against the models the provider CLI actually reports (newest version wins), or an alias such as 'sonnet'. A candidate is skipped if its provider is switched off / not installed or nothing matches, so nothing here is a hardcoded model name.",
     "default_tier": "standard",
     "tiers": {
       "trivial": {
@@ -27,8 +27,8 @@
       },
       "hard": {
         "candidates": [
-          "claude:opus",
-          "claude:sonnet",
+          "claude:opus@high",
+          "claude:sonnet@high",
           "agy:*pro*high",
           "codex:*"
         ],
