@@ -1,0 +1,14 @@
+/* Audit view extras. Theme tokens only; base layout is styles.css. */
+.audit-filters{display:flex;flex-wrap:wrap;gap:var(--sp-3);margin-bottom:var(--sp-4)}
+.audit-filters input{flex:1;min-width:160px}
+.audit-wrap{overflow:auto;max-height:60vh;border:var(--line-hair) solid var(--c-line);border-radius:var(--radius-3);background:var(--c-surface)}
+table.audit-table{border-collapse:collapse;width:100%;font-size:var(--fs-13)}
+.audit-table thead th{position:sticky;top:0;z-index:1;background:var(--c-surface-2);text-align:left;font-size:var(--fs-11);text-transform:uppercase;letter-spacing:var(--tracking-caps);color:var(--c-text-muted);padding:var(--sp-3) var(--sp-4);border-bottom:var(--line-hair) solid var(--c-line)}
+.audit-table td{padding:var(--sp-2) var(--sp-4);border-bottom:var(--line-hair) solid var(--c-line);vertical-align:top}
+.audit-table tbody tr:hover{background:var(--c-surface-2)}
+.audit-table tbody tr:focus{outline:var(--focus-ring) solid var(--c-focus);outline-offset:-2px}
+.audit-table .mono{font-family:var(--font-mono);font-size:var(--fs-12)}
+.audit-table .c-time{white-space:nowrap}
+.audit-table .detail{word-break:break-word;white-space:pre-wrap;min-width:200px}
+.audit-more{margin-top:var(--sp-3)}
+@media (max-width:760px){.audit-table .c-target{display:none}}
