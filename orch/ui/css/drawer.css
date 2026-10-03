@@ -1,0 +1,30 @@
+/* Agent drawer extras. Theme tokens only (var(--*)); structure comes from styles.css.
+   Wiring needed (E1/lead): add <link rel="stylesheet" href="css/drawer.css"> to
+   orch/ui/index.html, or @import url("css/drawer.css"); in orch/ui/styles.css. */
+.dw-head .aid { margin: 0 0 var(--sp-2); font-size: var(--fs-15); overflow-wrap: anywhere; }
+.dw-head .st { margin: 0 0 var(--sp-2); }
+.dw-head .prov { margin: 0 0 var(--sp-2); display: inline-flex; }
+.dw-eff { display: flex; align-items: center; gap: 6px; margin: 0 0 var(--sp-2); font-size: var(--fs-12); color: var(--c-text-muted); }
+.dw-meta { margin: 0 0 var(--sp-2); font-size: var(--fs-12); overflow-wrap: anywhere; }
+.dw-warn { margin: 0 0 var(--sp-3); }
+.dw-sec { margin-bottom: var(--sp-5); }
+.dw-sec h3 { font-size: var(--fs-11); text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--c-text-muted); margin: 0 0 var(--sp-2); }
+.dw-goal, .dw-last { margin: 0 0 var(--sp-2); font-size: var(--fs-13); white-space: pre-wrap; overflow-wrap: anywhere; }
+.dw-paths { display: flex; flex-wrap: wrap; gap: 4px; }
+.dw-stream { max-height: 320px; overflow: auto; border: var(--line-hair) solid var(--c-line); border-radius: var(--radius-2); background: var(--c-surface-sunk); padding: var(--sp-2) var(--sp-3); }
+.dw-line { border-top: var(--line-hair) solid var(--c-line); padding: 4px 0; }
+.dw-line:first-child { border-top: 0; }
+.dw-text { margin: 2px 0 0; font-size: var(--fs-12); white-space: pre-wrap; overflow-wrap: anywhere; }
+.dw-turns { display: flex; flex-direction: column; gap: 4px; }
+.dw-turn { font-size: var(--fs-12); color: var(--c-text-muted); border: var(--line-hair) solid var(--c-line); border-radius: var(--radius-2); padding: 4px 8px; overflow-wrap: anywhere; }
+.dw-row { display: flex; gap: 6px; flex-wrap: wrap; margin: var(--sp-2) 0; }
+.dw-send textarea { width: 100%; }
+.dw-modes { display: flex; gap: var(--sp-4); flex-wrap: wrap; font-size: var(--fs-12); color: var(--c-text-muted); margin: var(--sp-2) 0; }
+.dw-modes label { display: inline-flex; gap: 4px; align-items: center; }
+.dw-note { font-size: var(--fs-12); margin: var(--sp-2) 0; }
+.dw-note:empty { display: none; }
+.dw-err { color: var(--c-danger); font-size: var(--fs-12); margin: var(--sp-2) 0; }
+.dw-err:empty { display: none; }
+.dw-stop { border: var(--line-hair) solid var(--c-danger); border-radius: var(--radius-2); padding: var(--sp-3); margin-top: var(--sp-3); }
+.dw-stop label { display: block; font-weight: var(--fw-semibold); margin-bottom: var(--sp-2); }
+.dw-stop input { width: 100%; }
