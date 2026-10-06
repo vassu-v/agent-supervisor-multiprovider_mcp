@@ -226,6 +226,8 @@ class AgentRec:
         self.lock = threading.RLock()
         self.restarts = 0
         self.guard_hits = []
+        self.open_tools = []                      # [(tool_use id, tool name)] started and not yet ended (dashboard: current_tool)
+        self.pending_esc = None                   # id of this agent's pending escalation, if any
         self.stopped_by = None
         self.parent = None                        # aid of the agent that spawned this one (hierarchy)
         self.ws = self.ws_name = self.ws_root = None
@@ -246,9 +248,34 @@ class AgentRec:
              "goal": self.goal, "paths": self.paths, "created": self.created,
              "effort": self.effort, "effort_applied": self.effort_applied, "effort_warning": self.effort_warning,
              "last_text": (last.get("response") or last.get("partial") or "")[-300:]}
+        d.update(self._live_fields())
         if full:
             d["turns_full"] = self.turns
         return d
+
+
+    def _live_fields(self):
+        """Dashboard additions: last_event {ts,type}, current_tool, turn_t0, pending_escalation."""
+        try:
+            ev = self.events[-1]
+            last_ev = {"ts": ev.get("ts"), "type": ev.get("type")}
+        except IndexError:
+            last_ev = None
+        tool = self.open_tools[-1][1] if self.open_tools else None
+        t0 = None
+        for t in reversed(self.turns[-3:]):
+            if "response" not in t:
+                t0 = t.get("t0")
+                break
+        return {"last_event": last_ev, "current_tool": tool or None, "turn_t0": t0, "pending_escalation": self.pending_esc}
+
+
+class TooManyWaiters(Exception):
+    pass
+
+
+MAX_WAITERS = 8
+CHANGE_LOG = 4000                                 # bumps remembered; a client further behind than this gets reset
 
 
 class Orchestrator:
@@ -271,6 +298,12 @@ class Orchestrator:
         self._pending_wake = {}                   # aid -> reasons seen while it was busy; delivered when it goes idle
         self._wake_timers = set()                 # agents with a debounce timer pending (one wake per burst of events)
         self._surfaced = set()                    # stale question ids already shown to a parent
+        self.rev = 0                              # change counter for the dashboard long-poll (/api/changes)
+        self._cv = threading.Condition(threading.Lock())     # leaf lock: nothing else is acquired while holding it
+        self._chlog = collections.deque(maxlen=CHANGE_LOG)   # (rev, kind, key)
+        self._chfloor = 0                         # highest rev that fell out of _chlog
+        self._waiters = 0
+        self._text_bump = {}                      # aid -> monotonic time of the last coalesced text bump
 
     # ------------------------------------------------------------ helpers
     def _load(self, provider):
@@ -288,7 +321,74 @@ class Orchestrator:
         self.audit.append(rec)
         with open(os.path.join(LOGS, "audit.jsonl"), "a", encoding="utf-8") as f:
             f.write(json.dumps(rec) + "\n")
+        self._bump("audit")
+        if kind == "provider_toggle":
+            self._bump("providers")
+        if kind in ("spawn", "stop", "spawn_failed"):
+            self._bump("workspaces")
+        if isinstance(kw.get("agent"), str):
+            self._bump("agent", kw["agent"])
         return rec
+
+    # ------------------------------------------------------------ change feed (dashboard long-poll)
+    def _bump(self, kind, key=None):
+        """O(1). kind: agent|board|esc|audit|providers|workspaces. Wakes every long-poll waiter."""
+        with self._cv:
+            self.rev += 1
+            if len(self._chlog) == self._chlog.maxlen:
+                self._chfloor = self._chlog[0][0]
+            self._chlog.append((self.rev, kind, key))
+            self._cv.notify_all()
+
+    def wait_changes(self, since=None, wait=25):
+        """-> {"rev","reset","agents","boards","escalations","audit","providers","workspaces"}. Blocks up to `wait` s (cap 30)
+        until rev > since. since=None, ahead of rev (daemon restarted) or older than the log -> reset."""
+        wait = max(0.0, min(float(wait), 30.0))
+        with self._cv:
+            if self._waiters >= MAX_WAITERS:
+                raise TooManyWaiters(f"too many dashboard long-polls (max {MAX_WAITERS})")
+            self._waiters += 1
+            try:
+                end = time.monotonic() + wait
+                if since is not None and 0 <= since <= self.rev:
+                    while self.rev <= since:
+                        left = end - time.monotonic()
+                        if left <= 0:
+                            break
+                        self._cv.wait(left)
+                out = {"rev": self.rev, "reset": False, "agents": [], "boards": [], "escalations": False, "audit": False,
+                       "providers": False, "workspaces": False}
+                if since is None or since < 0 or since > self.rev or since < self._chfloor:
+                    out["reset"] = True
+                    return out
+                for r, kind, key in self._chlog:
+                    if r <= since:
+                        continue
+                    if kind == "agent":
+                        if key not in out["agents"]:
+                            out["agents"].append(key)
+                    elif kind == "board":
+                        if key not in out["boards"]:
+                            out["boards"].append(key)
+                    elif kind == "esc":
+                        out["escalations"] = True
+                    elif kind in out:
+                        out[kind] = True
+                return out
+            finally:
+                self._waiters -= 1
+
+    @staticmethod
+    def provider_caps(name):
+        """Adapter capabilities from the class attribute; nothing is launched."""
+        try:
+            spec = PROVIDERS.get(name)
+            if not spec:
+                return {}
+            mod, cls = spec.split(":")
+            return dict(getattr(getattr(importlib.import_module(mod), cls), "capabilities", {}) or {})
+        except Exception:
+            return {}
 
     def _get(self, aid):
         a = self.agents.get(aid)
@@ -427,6 +527,8 @@ class Orchestrator:
                 raise _NotIdle()                  # a wake must never overlap a turn that is already running
             rec.turns.append({"prompt": shown, "mode": mode, "t0": now(), "partial": ""})
             rec.status = "busy"
+        self._bump("agent", rec.id)
+        self._bump("workspaces")
         try:
             rec.adapter.send(text, mode)
             if cur is not None:
@@ -461,6 +563,7 @@ class Orchestrator:
                 text = f'{text} (agent text, quoted: "{self._quote(quote)}")'
             p = self.board.post(rec.ws, "daemon", "daemon", "auto", text[:500], paths=(rec.paths or [])[:10] or None,
                                 about=rec.id, event=event)
+            self._bump("board", rec.ws)
             self._wake_for(p)
         except Exception as e:
             try:
@@ -534,14 +637,20 @@ class Orchestrator:
 
     def board_post(self, ws, sender, kind, text, paths=None, reply_to=None):
         p = self.board.post(ws, sender, kind_of(sender), kind, text, paths=paths, reply_to=reply_to)
+        self._bump("board", ws)
         self._wake_for(p)
         return p
 
     def board_ask(self, ws, sender, text, paths=None):
-        return self.board.ask(ws, sender, kind_of(sender), text, paths=paths)
+        p = self.board.ask(ws, sender, kind_of(sender), text, paths=paths)
+        self._bump("board", ws)
+        return p
 
     def board_answer(self, post_id, sender, text, ws=None):
         q, a = self.board.answer(post_id, sender, text, sender_kind=kind_of(sender), ws=ws)
+        key = (q or {}).get("ws") or ws
+        if key:                                       # never put a null workspace into the change feed
+            self._bump("board", key)
         self._wake_for(a)
         return {"question": q, "answer": a}
 
@@ -692,9 +801,35 @@ class Orchestrator:
                 for k in rec.usage:
                     rec.usage[k] += ev.get(k, 0) or 0
             elif t in ("tool_start", "permission"):
+                if t == "tool_start":
+                    with rec.lock:
+                        rec.open_tools.append((ev.get("id"), ev.get("tool") or ""))
+                        del rec.open_tools[:-50]
                 self._check_guard(rec, ev)
+            elif t == "tool_end":
+                with rec.lock:
+                    ot = rec.open_tools
+                    i = next((k for k in range(len(ot) - 1, -1, -1) if ev.get("id") is not None and ot[k][0] == ev.get("id")), None)
+                    if i is None and ev.get("tool"):
+                        i = next((k for k in range(len(ot) - 1, -1, -1) if ot[k][1] == ev.get("tool")), None)
+                    if i is not None:
+                        del ot[i]
             elif t == "result":
+                with rec.lock:
+                    rec.open_tools.clear()
                 self._on_result(rec, ev)
+            if t == "text":                            # coalesce: at most one bump per 250 ms per agent
+                m = time.monotonic()
+                if m - self._text_bump.get(rec.id, 0.0) >= 0.25:
+                    self._text_bump[rec.id] = m
+                    self._bump("agent", rec.id)
+            else:
+                if t == "status" and ev.get("state") == "dead":
+                    with rec.lock:
+                        rec.open_tools.clear()
+                self._bump("agent", rec.id)
+                if t in ("status", "result"):
+                    self._bump("workspaces")
         except Exception as e:  # event handling must never kill an adapter thread
             try:
                 self._audit("core_error", agent=rec.id, error=repr(e))
@@ -780,8 +915,14 @@ class Orchestrator:
                 if e["agent"] == rec.id and e["state"] == "pending" and e["input"] == shown:
                     return
             eid = "e" + uuid.uuid4().hex[:5]
+            ets = now()
             self.escalations[eid] = {"id": eid, "agent": rec.id, "agent_created": rec.created, "why": why,
-                                     "tool": ev.get("tool"), "input": shown, "ts": now(), "state": "pending", "cwd": rec.cwd}
+                                     "tool": ev.get("tool"), "input": shown, "ts": ets, "state": "pending", "cwd": rec.cwd,
+                                     "workspace": rec.ws,
+                                     "deadline": ets + load_policy()["escalation"]["pending_timeout_s"]}
+            rec.pending_esc = eid
+        self._bump("esc")
+        self._bump("agent", rec.id)
         if load_policy()["escalation"]["on_escalate"] == "interrupt":
             threading.Thread(target=self._guard_interrupt, args=(rec,), daemon=True).start()
         threading.Thread(target=self._escalation_timeout, args=(eid,), daemon=True).start()
@@ -807,6 +948,10 @@ class Orchestrator:
             if not e or e["state"] != "pending":
                 raise KeyError("no such pending escalation")
             e.update(state=decision, note=note, resolved_by=by, resolved=now())
+            ag = self.agents.get(e["agent"])
+            if ag is not None and ag.pending_esc == eid:
+                ag.pending_esc = self._other_pending(ag.id, eid)
+        self._bump("esc")
         self._audit("resolve", escalation=eid, decision=decision, by=by, note=note)
         rec = self._get(e["agent"])
         self._auto(rec, "resolved", f"escalation for {rec.id} was {decision}ed" if decision == "deny" else f"escalation for {rec.id} was allowed")
@@ -818,14 +963,24 @@ class Orchestrator:
             self.send(rec.id, f"Orchestrator decision: DENIED. {note} Do not perform that action; choose a safe alternative.", "queue", by=by)
         return e
 
+    def _other_pending(self, agent_id, skip):
+        """Id of another still-pending escalation of this agent (so `pending_escalation` never hides one), else None."""
+        for e in list(self.escalations.values()):
+            if e["agent"] == agent_id and e["state"] == "pending" and e["id"] != skip:
+                return e["id"]
+        return None
+
     def _escalation_timeout(self, eid):
         pol = load_policy()["escalation"]
         time.sleep(pol["pending_timeout_s"])
         e = self.escalations.get(eid)
         if e and e["state"] == "pending":
             e["state"] = "timeout"
-            self._audit("escalation_timeout", escalation=eid)
             ag = self.agents.get(e["agent"])
+            if ag is not None and ag.pending_esc == eid:
+                ag.pending_esc = self._other_pending(ag.id, eid)
+            self._bump("esc")
+            self._audit("escalation_timeout", escalation=eid)
             if pol["timeout_action"] == "stop" and ag is not None and ag.created == e.get("agent_created"):
                 try:
                     self.stop(e["agent"], by="guard", reason=f"escalation {eid} unanswered")
@@ -962,6 +1117,74 @@ class Orchestrator:
     def result(self, aid):
         rec = self._get(aid)
         return {"status": rec.status, "turns": rec.turns, "usage": rec.usage}
+
+    def timeline(self, ws=None, since=None, until=None, max_items=2000):
+        """Text-free activity timeline for the dashboard: turns, tool calls (from the event deque), guard blocks,
+        escalations and board posts. Newest `max_items` kept (truncated=true) when over the limit."""
+        t_now = now()
+        until = t_now if until is None else float(until)
+        since = 0.0 if since is None else float(since)
+        max_items = max(1, min(int(max_items), 5000))
+        recs = [a for a in list(self.agents.values()) if ws is None or a.ws == ws]
+        ids = {a.id for a in recs}
+        agents, items = [], []
+        for a in recs:
+            with a.lock:
+                turns = [dict(t) for t in a.turns]
+                evs = list(a.events)
+                hits = list(a.guard_hits)
+            ended = None
+            if a.status == "dead":
+                ended = (a.stopped_by or {}).get("ts") or next((e["ts"] for e in reversed(evs) if e.get("type") == "status"
+                                                                and e.get("state") == "dead"), None) or (evs[-1]["ts"] if evs else a.created)
+            if since > until or a.created > until or (ended is not None and ended < since):
+                continue
+            agents.append({"id": a.id, "provider": a.provider, "model": a.model, "created": a.created, "ended": ended})
+            for t in turns:
+                t1 = None if "response" not in t else t["t0"] + (t.get("secs") or 0)
+                items.append({"a": a.id, "k": "turn", "t0": t["t0"], "t1": t1,
+                              "ok": None if "response" not in t else bool(t.get("ok")), "int": bool(t.get("interrupted"))})
+            open_, done = {}, []
+            for e in evs:
+                ty = e.get("type")
+                if ty == "tool_start":
+                    open_[e.get("id") if e.get("id") is not None else ("n", len(done), e["seq"])] = e
+                elif ty == "tool_end":
+                    k = e.get("id")
+                    st_ev = open_.pop(k, None) if k is not None else None
+                    if st_ev is None and e.get("tool"):
+                        k = next((k2 for k2, v in open_.items() if v.get("tool") == e["tool"]), None)
+                        st_ev = open_.pop(k, None) if k is not None else None
+                    if st_ev is not None:
+                        done.append({"a": a.id, "k": "tool", "t0": st_ev["ts"], "t1": e["ts"], "tool": st_ev.get("tool") or "",
+                                     "ok": e.get("ok")})
+            items += done
+            items += [{"a": a.id, "k": "tool", "t0": v["ts"], "t1": None, "tool": v.get("tool") or "", "ok": None}
+                      for v in open_.values()]
+            items += [{"a": a.id, "k": "guard", "t": h["ts"], "decision": h["decision"]} for h in hits if h["decision"] == "block"]
+        for e in list(self.escalations.values()):
+            if e["agent"] in ids:
+                items.append({"a": e["agent"], "k": "esc", "t": e["ts"], "id": e["id"], "state": e["state"]})
+        scope = {a.ws for a in recs} if ws is None else {ws}
+        for w in scope:
+            if not w:
+                continue
+            for p in self.store.list_posts(w, since=0, limit=1000, newest_first=True):
+                if p["kind"] != "auto":
+                    items.append({"a": None, "k": "post", "t": p["ts"], "id": p["id"], "kind": p["kind"], "ws": p["ws"]})
+
+        def start(i):
+            return i["t0"] if "t0" in i else i["t"]
+
+        def end(i):
+            return (i.get("t1") if "t1" in i else i["t"]) or until
+        items = [i for i in items if start(i) <= until and end(i) >= since]
+        items.sort(key=start)
+        truncated = len(items) > max_items
+        if truncated:
+            items = items[-max_items:]
+        lo = since or (min([start(i) for i in items] + [a["created"] for a in agents]) if (items or agents) else until)
+        return {"from": lo, "to": until, "truncated": truncated, "agents": agents, "items": items}
 
     def shutdown(self):
         for a in list(self.agents.values()):

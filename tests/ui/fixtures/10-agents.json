@@ -1,0 +1,2431 @@
+{
+ "list": [
+  {
+   "id": "a5",
+   "provider": "claude",
+   "model": "claude-opus-4-1",
+   "cwd": "D:/work/api-server",
+   "tier": "hard",
+   "status": "busy",
+   "owner": "dashboard",
+   "turns": 11,
+   "queued": 0,
+   "usage": {
+    "input": 374744,
+    "output": 20310,
+    "cache_read": 388191
+   },
+   "restarts": 1,
+   "session": "sess-a5",
+   "caps": {
+    "steer": true,
+    "interrupt": true,
+    "usage": true,
+    "native_queue": false
+   },
+   "needs_review": false,
+   "stopped_by": null,
+   "age_s": 4930,
+   "parent": null,
+   "workspace": "w-api",
+   "workspace_name": "api-server",
+   "subdir": "",
+   "goal": "fix flaky CI job",
+   "paths": [
+    "src/*",
+    "README.md",
+    "lib/auth.py"
+   ],
+   "created": 1789995070.0,
+   "effort": "high",
+   "effort_applied": "high",
+   "effort_warning": null,
+   "last_text": "Working through step 6. Updated the module and re-ran the checks; 31 passed.",
+   "last_event": {
+    "ts": 1789999941.0,
+    "type": "tool_start"
+   },
+   "current_tool": "Grep",
+   "turn_t0": 1789999688.0,
+   "pending_escalation": "e27bd",
+   "children": [
+    "a7"
+   ],
+   "depth": 0
+  },
+  {
+   "id": "a7",
+   "provider": "claude",
+   "model": "claude-haiku-4-5",
+   "cwd": "D:/work/api-server",
+   "tier": "bulk",
+   "status": "dead",
+   "owner": "a5",
+   "turns": 8,
+   "queued": 0,
+   "usage": {
+    "input": 40177,
+    "output": 15229,
+    "cache_read": 81267
+   },
+   "restarts": 0,
+   "session": "sess-a7",
+   "caps": {
+    "steer": true,
+    "interrupt": true,
+    "usage": true,
+    "native_queue": false
+   },
+   "needs_review": false,
+   "stopped_by": null,
+   "age_s": 5004,
+   "parent": "a5",
+   "workspace": "w-api",
+   "workspace_name": "api-server",
+   "subdir": "",
+   "goal": "write unit tests for the parser",
+   "paths": [
+    "src/*"
+   ],
+   "created": 1789994996.0,
+   "effort": "low",
+   "effort_applied": "low",
+   "effort_warning": null,
+   "last_text": "Working through step 1. Updated the module and re-ran the checks; 29 passed.",
+   "last_event": {
+    "ts": 1789997150.0,
+    "type": "status"
+   },
+   "current_tool": null,
+   "turn_t0": null,
+   "pending_escalation": null,
+   "children": [],
+   "depth": 1
+  },
+  {
+   "id": "a8",
+   "provider": "agy",
+   "model": "gemini-3-flash-low",
+   "cwd": "D:/work/web-client",
+   "tier": "standard",
+   "status": "busy",
+   "owner": "dashboard",
+   "turns": 3,
+   "queued": 0,
+   "usage": {
+    "input": 196722,
+    "output": 20856,
+    "cache_read": 104944
+   },
+   "restarts": 1,
+   "session": "sess-a8",
+   "caps": {
+    "steer": false,
+    "interrupt": "restart",
+    "usage": true,
+    "native_queue": true
+   },
+   "needs_review": false,
+   "stopped_by": null,
+   "age_s": 4054,
+   "parent": null,
+   "workspace": "w-web",
+   "workspace_name": "web-client",
+   "subdir": "",
+   "goal": "port scripts to python 3.10",
+   "paths": [
+    "README.md",
+    "src/*",
+    "tests/*"
+   ],
+   "created": 1789995946.0,
+   "effort": "low",
+   "effort_applied": "low",
+   "effort_warning": null,
+   "last_text": "Working through step 4. Updated the module and re-ran the checks; 22 passed.",
+   "last_event": {
+    "ts": 1789999916.0,
+    "type": "tool_end"
+   },
+   "current_tool": null,
+   "turn_t0": 1789999717.0,
+   "pending_escalation": null,
+   "children": [
+    "a10"
+   ],
+   "depth": 0
+  },
+  {
+   "id": "a10",
+   "provider": "claude",
+   "model": "claude-opus-4-1",
+   "cwd": "D:/work/web-client",
+   "tier": "standard",
+   "status": "busy",
+   "owner": "a8",
+   "turns": 4,
+   "queued": 0,
+   "usage": {
+    "input": 153446,
+    "output": 22599,
+    "cache_read": 382531
+   },
+   "restarts": 1,
+   "session": "sess-a10",
+   "caps": {
+    "steer": true,
+    "interrupt": true,
+    "usage": true,
+    "native_queue": false
+   },
+   "needs_review": false,
+   "stopped_by": null,
+   "age_s": 430,
+   "parent": "a8",
+   "workspace": "w-web",
+   "workspace_name": "web-client",
+   "subdir": "",
+   "goal": "refactor the auth module",
+   "paths": [],
+   "created": 1789999570.0,
+   "effort": "medium",
+   "effort_applied": "medium",
+   "effort_warning": null,
+   "last_text": "Working through step 1. Updated the module and re-ran the checks; 22 passed.",
+   "last_event": {
+    "ts": 1789999890.0,
+    "type": "tool_start"
+   },
+   "current_tool": "Write",
+   "turn_t0": 1789999790.0,
+   "pending_escalation": null,
+   "children": [],
+   "depth": 1
+  },
+  {
+   "id": "a9",
+   "provider": "codex",
+   "model": "gpt-5",
+   "cwd": "D:/work/api-server",
+   "tier": "hard",
+   "status": "busy",
+   "owner": "dashboard",
+   "turns": 10,
+   "queued": 0,
+   "usage": {
+    "input": 79842,
+    "output": 3912,
+    "cache_read": 206330
+   },
+   "restarts": 1,
+   "session": "sess-a9",
+   "caps": {
+    "steer": true,
+    "interrupt": true,
+    "usage": true,
+    "native_queue": false
+   },
+   "needs_review": false,
+   "stopped_by": null,
+   "age_s": 3482,
+   "parent": null,
+   "workspace": "w-api",
+   "workspace_name": "api-server",
+   "subdir": "",
+   "goal": "profile startup time",
+   "paths": [
+    "tests/*",
+    "README.md"
+   ],
+   "created": 1789996518.0,
+   "effort": "high",
+   "effort_applied": "high",
+   "effort_warning": null,
+   "last_text": "Working through step 4. Updated the module and re-ran the checks; 8 passed.",
+   "last_event": {
+    "ts": 1789999881.0,
+    "type": "tool_start"
+   },
+   "current_tool": "Read",
+   "turn_t0": 1789999648.0,
+   "pending_escalation": null,
+   "children": [],
+   "depth": 0
+  },
+  {
+   "id": "a2",
+   "provider": "agy",
+   "model": "gemini-3-pro-high",
+   "cwd": "D:/work/web-client",
+   "tier": "bulk",
+   "status": "idle",
+   "owner": "dashboard",
+   "turns": 14,
+   "queued": 0,
+   "usage": {
+    "input": 236322,
+    "output": 31405,
+    "cache_read": 284068
+   },
+   "restarts": 0,
+   "session": "sess-a2",
+   "caps": {
+    "steer": false,
+    "interrupt": "restart",
+    "usage": true,
+    "native_queue": true
+   },
+   "needs_review": false,
+   "stopped_by": null,
+   "age_s": 2143,
+   "parent": null,
+   "workspace": "w-web",
+   "workspace_name": "web-client",
+   "subdir": "",
+   "goal": "fix flaky CI job",
+   "paths": [],
+   "created": 1789997857.0,
+   "effort": "high",
+   "effort_applied": "high",
+   "effort_warning": null,
+   "last_text": "Working through step 1. Updated the module and re-ran the checks; 27 passed.",
+   "last_event": {
+    "ts": 1789999734.0,
+    "type": "result"
+   },
+   "current_tool": null,
+   "turn_t0": null,
+   "pending_escalation": null,
+   "children": [
+    "a4",
+    "a6"
+   ],
+   "depth": 0
+  },
+  {
+   "id": "a4",
+   "provider": "claude",
+   "model": "claude-haiku-4-5",
+   "cwd": "D:/work/web-client",
+   "tier": "standard",
+   "status": "busy",
+   "owner": "a2",
+   "turns": 3,
+   "queued": 2,
+   "usage": {
+    "input": 185212,
+    "output": 27328,
+    "cache_read": 365865
+   },
+   "restarts": 0,
+   "session": "sess-a4",
+   "caps": {
+    "steer": true,
+    "interrupt": true,
+    "usage": true,
+    "native_queue": false
+   },
+   "needs_review": false,
+   "stopped_by": null,
+   "age_s": 4752,
+   "parent": "a2",
+   "workspace": "w-web",
+   "workspace_name": "web-client",
+   "subdir": "",
+   "goal": "write unit tests for the parser",
+   "paths": [
+    "README.md"
+   ],
+   "created": 1789995248.0,
+   "effort": "medium",
+   "effort_applied": "medium",
+   "effort_warning": null,
+   "last_text": "Working through step 6. Updated the module and re-ran the checks; 3 passed.",
+   "last_event": {
+    "ts": 1789999990.0,
+    "type": "tool_start"
+   },
+   "current_tool": "Edit",
+   "turn_t0": 1789999739.0,
+   "pending_escalation": null,
+   "children": [],
+   "depth": 1
+  },
+  {
+   "id": "a6",
+   "provider": "claude",
+   "model": "claude-sonnet-4-5",
+   "cwd": "D:/work/web-client",
+   "tier": "bulk",
+   "status": "idle",
+   "owner": "a2",
+   "turns": 1,
+   "queued": 0,
+   "usage": {
+    "input": 262206,
+    "output": 25646,
+    "cache_read": 204241
+   },
+   "restarts": 0,
+   "session": "sess-a6",
+   "caps": {
+    "steer": true,
+    "interrupt": true,
+    "usage": true,
+    "native_queue": false
+   },
+   "needs_review": false,
+   "stopped_by": null,
+   "age_s": 564,
+   "parent": "a2",
+   "workspace": "w-web",
+   "workspace_name": "web-client",
+   "subdir": "",
+   "goal": "migrate config to TOML",
+   "paths": [
+    "lib/auth.py",
+    "src/*",
+    "docs/*"
+   ],
+   "created": 1789999436.0,
+   "effort": null,
+   "effort_applied": null,
+   "effort_warning": null,
+   "last_text": "Working through step 5. Updated the module and re-ran the checks; 30 passed.",
+   "last_event": {
+    "ts": 1789999489.0,
+    "type": "result"
+   },
+   "current_tool": null,
+   "turn_t0": null,
+   "pending_escalation": null,
+   "children": [],
+   "depth": 1
+  },
+  {
+   "id": "a1",
+   "provider": "agy",
+   "model": "gemini-3-flash-low",
+   "cwd": "D:/work/api-server",
+   "tier": "standard",
+   "status": "busy",
+   "owner": "dashboard",
+   "turns": 7,
+   "queued": 1,
+   "usage": {
+    "input": 104747,
+    "output": 44848,
+    "cache_read": 232082
+   },
+   "restarts": 1,
+   "session": "sess-a1",
+   "caps": {
+    "steer": false,
+    "interrupt": "restart",
+    "usage": true,
+    "native_queue": true
+   },
+   "needs_review": false,
+   "stopped_by": null,
+   "age_s": 1682,
+   "parent": null,
+   "workspace": "w-api",
+   "workspace_name": "api-server",
+   "subdir": "",
+   "goal": "refactor the auth module",
+   "paths": [
+    "tests/*",
+    "README.md"
+   ],
+   "created": 1789998318.0,
+   "effort": "low",
+   "effort_applied": "low",
+   "effort_warning": null,
+   "last_text": "Working through step 8. Updated the module and re-ran the checks; 36 passed.",
+   "last_event": {
+    "ts": 1789999976.0,
+    "type": "tool_start"
+   },
+   "current_tool": "Grep",
+   "turn_t0": 1789999830.0,
+   "pending_escalation": null,
+   "children": [
+    "a3"
+   ],
+   "depth": 0
+  },
+  {
+   "id": "a3",
+   "provider": "claude",
+   "model": "claude-sonnet-4-5",
+   "cwd": "D:/work/api-server",
+   "tier": "standard",
+   "status": "busy",
+   "owner": "a1",
+   "turns": 11,
+   "queued": 1,
+   "usage": {
+    "input": 363367,
+    "output": 52338,
+    "cache_read": 498681
+   },
+   "restarts": 0,
+   "session": "sess-a3",
+   "caps": {
+    "steer": true,
+    "interrupt": true,
+    "usage": true,
+    "native_queue": false
+   },
+   "needs_review": false,
+   "stopped_by": null,
+   "age_s": 1104,
+   "parent": "a1",
+   "workspace": "w-api",
+   "workspace_name": "api-server",
+   "subdir": "",
+   "goal": "profile startup time",
+   "paths": [
+    "docs/*"
+   ],
+   "created": 1789998896.0,
+   "effort": "low",
+   "effort_applied": "low",
+   "effort_warning": null,
+   "last_text": "Working through step 5. Updated the module and re-ran the checks; 24 passed.",
+   "last_event": {
+    "ts": 1789999890.0,
+    "type": "tool_start"
+   },
+   "current_tool": "Edit",
+   "turn_t0": 1789999605.0,
+   "pending_escalation": null,
+   "children": [],
+   "depth": 1
+  }
+ ],
+ "workspaces": [
+  {
+   "id": "w-api",
+   "name": "api-server",
+   "root": "D:/work/api-server",
+   "agents": 5,
+   "busy": 4,
+   "live": 4,
+   "sessions": [
+    {
+     "client": "dashboard",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "w-web",
+   "name": "web-client",
+   "root": "D:/work/web-client",
+   "agents": 5,
+   "busy": 3,
+   "live": 5,
+   "sessions": []
+  }
+ ],
+ "boards": {
+  "w-api": {
+   "posts": [
+    {
+     "id": 1,
+     "ts": 1789997033.0,
+     "ws": "w-api",
+     "sender": "a7",
+     "sender_kind": "agent",
+     "kind": "handoff",
+     "text": "handoff: review the PR queue",
+     "paths": [],
+     "reply_to": null,
+     "thread": null,
+     "status": "closed",
+     "answered_by": null,
+     "about": null,
+     "event": null
+    },
+    {
+     "id": 2,
+     "ts": 1789997322.0,
+     "ws": "w-api",
+     "sender": "a1",
+     "sender_kind": "agent",
+     "kind": "changed",
+     "text": "changed: migrate config to TOML",
+     "paths": [],
+     "reply_to": null,
+     "thread": null,
+     "status": "closed",
+     "answered_by": null,
+     "about": null,
+     "event": null
+    },
+    {
+     "id": 3,
+     "ts": 1789997652.0,
+     "ws": "w-api",
+     "sender": "a9",
+     "sender_kind": "agent",
+     "kind": "blocked",
+     "text": "blocked: profile startup time",
+     "paths": [],
+     "reply_to": null,
+     "thread": null,
+     "status": "closed",
+     "answered_by": null,
+     "about": null,
+     "event": null
+    },
+    {
+     "id": 4,
+     "ts": 1789997936.0,
+     "ws": "w-api",
+     "sender": "a1",
+     "sender_kind": "agent",
+     "kind": "blocked",
+     "text": "blocked: migrate config to TOML",
+     "paths": [],
+     "reply_to": null,
+     "thread": null,
+     "status": "closed",
+     "answered_by": null,
+     "about": null,
+     "event": null
+    },
+    {
+     "id": 5,
+     "ts": 1789998290.0,
+     "ws": "w-api",
+     "sender": "daemon",
+     "sender_kind": "daemon",
+     "kind": "auto",
+     "text": "a5 finished a turn",
+     "paths": [],
+     "reply_to": null,
+     "thread": null,
+     "status": "closed",
+     "answered_by": null,
+     "about": "a5",
+     "event": "turn"
+    }
+   ],
+   "last": 5,
+   "open_questions": 0
+  },
+  "w-web": {
+   "posts": [
+    {
+     "id": 6,
+     "ts": 1789997044.0,
+     "ws": "w-web",
+     "sender": "a6",
+     "sender_kind": "agent",
+     "kind": "started",
+     "text": "started: profile startup time",
+     "paths": [],
+     "reply_to": null,
+     "thread": null,
+     "status": "closed",
+     "answered_by": null,
+     "about": null,
+     "event": null
+    },
+    {
+     "id": 7,
+     "ts": 1789997367.0,
+     "ws": "w-web",
+     "sender": "a10",
+     "sender_kind": "agent",
+     "kind": "done",
+     "text": "done: upgrade dependencies",
+     "paths": [],
+     "reply_to": null,
+     "thread": null,
+     "status": "closed",
+     "answered_by": null,
+     "about": null,
+     "event": null
+    },
+    {
+     "id": 8,
+     "ts": 1789997639.0,
+     "ws": "w-web",
+     "sender": "a10",
+     "sender_kind": "agent",
+     "kind": "changed",
+     "text": "changed: migrate config to TOML",
+     "paths": [],
+     "reply_to": null,
+     "thread": null,
+     "status": "closed",
+     "answered_by": null,
+     "about": null,
+     "event": null
+    },
+    {
+     "id": 9,
+     "ts": 1789997921.0,
+     "ws": "w-web",
+     "sender": "a2",
+     "sender_kind": "agent",
+     "kind": "handoff",
+     "text": "handoff: port scripts to python 3.10",
+     "paths": [],
+     "reply_to": null,
+     "thread": null,
+     "status": "closed",
+     "answered_by": null,
+     "about": null,
+     "event": null
+    }
+   ],
+   "last": 9,
+   "open_questions": 0
+  }
+ },
+ "escalations": [
+  {
+   "id": "e27bd",
+   "agent": "a5",
+   "agent_created": 1789995070.0,
+   "why": "risky action: 'git push origin main'",
+   "tool": "Bash",
+   "input": "git push origin main",
+   "ts": 1789999960.0,
+   "state": "pending",
+   "cwd": "D:/work/api-server",
+   "workspace": "w-api",
+   "deadline": 1790000560.0
+  },
+  {
+   "id": "ec5da",
+   "agent": "a6",
+   "agent_created": 1789999436.0,
+   "why": "path outside cwd: C:/Windows/x",
+   "tool": "Bash",
+   "input": "type C:/Windows/x",
+   "ts": 1789998000.0,
+   "state": "allow",
+   "cwd": "D:/work/web-client",
+   "workspace": "w-web",
+   "deadline": 1789998600.0,
+   "note": "ok",
+   "resolved_by": "dashboard",
+   "resolved": 1789998020.0
+  },
+  {
+   "id": "e1949",
+   "agent": "a1",
+   "agent_created": 1789998318.0,
+   "why": "path outside cwd: C:/Windows/x",
+   "tool": "Bash",
+   "input": "type C:/Windows/x",
+   "ts": 1789997900.0,
+   "state": "deny",
+   "cwd": "D:/work/api-server",
+   "workspace": "w-api",
+   "deadline": 1789998500.0,
+   "note": "ok",
+   "resolved_by": "dashboard",
+   "resolved": 1789997920.0
+  },
+  {
+   "id": "ee6c8",
+   "agent": "a3",
+   "agent_created": 1789998896.0,
+   "why": "path outside cwd: C:/Windows/x",
+   "tool": "Bash",
+   "input": "type C:/Windows/x",
+   "ts": 1789997800.0,
+   "state": "timeout",
+   "cwd": "D:/work/api-server",
+   "workspace": "w-api",
+   "deadline": 1789998400.0
+  }
+ ],
+ "providers": [
+  {
+   "name": "claude",
+   "enabled": true,
+   "installed": true,
+   "path": "C:/tools/claude.exe",
+   "adapter": true,
+   "state": "ready",
+   "caps": {
+    "steer": true,
+    "interrupt": true,
+    "usage": true,
+    "native_queue": false
+   }
+  },
+  {
+   "name": "codex",
+   "enabled": true,
+   "installed": true,
+   "path": "C:/tools/codex.exe",
+   "adapter": true,
+   "state": "ready",
+   "caps": {
+    "steer": true,
+    "interrupt": true,
+    "usage": true,
+    "native_queue": false
+   }
+  },
+  {
+   "name": "agy",
+   "enabled": true,
+   "installed": true,
+   "path": "C:/tools/agy.exe",
+   "adapter": true,
+   "state": "ready",
+   "caps": {
+    "steer": false,
+    "interrupt": "restart",
+    "usage": true,
+    "native_queue": true
+   }
+  }
+ ],
+ "models": {
+  "claude": {
+   "enabled": true,
+   "source": "live",
+   "error": null,
+   "total": 3,
+   "matched": 3,
+   "models": [
+    {
+     "id": "claude-sonnet-4-5",
+     "label": "claude-sonnet-4-5",
+     "efforts": [
+      "low",
+      "medium",
+      "high"
+     ]
+    },
+    {
+     "id": "claude-opus-4-1",
+     "label": "claude-opus-4-1",
+     "efforts": [
+      "low",
+      "medium",
+      "high"
+     ]
+    },
+    {
+     "id": "claude-haiku-4-5",
+     "label": "claude-haiku-4-5",
+     "efforts": [
+      "low",
+      "medium",
+      "high"
+     ]
+    }
+   ],
+   "truncated": false
+  },
+  "codex": {
+   "enabled": true,
+   "source": "live",
+   "error": null,
+   "total": 2,
+   "matched": 2,
+   "models": [
+    {
+     "id": "gpt-5-codex",
+     "label": "gpt-5-codex",
+     "efforts": [
+      "low",
+      "medium",
+      "high"
+     ]
+    },
+    {
+     "id": "gpt-5",
+     "label": "gpt-5",
+     "efforts": [
+      "low",
+      "medium",
+      "high"
+     ]
+    }
+   ],
+   "truncated": false
+  },
+  "agy": {
+   "enabled": true,
+   "source": "live",
+   "error": null,
+   "total": 4,
+   "matched": 4,
+   "models": [
+    {
+     "id": "gemini-3-pro-high",
+     "label": "gemini-3-pro-high",
+     "efforts": [
+      "low",
+      "high"
+     ]
+    },
+    {
+     "id": "gemini-3-pro-low",
+     "label": "gemini-3-pro-low",
+     "efforts": [
+      "low",
+      "high"
+     ]
+    },
+    {
+     "id": "gemini-3-flash-high",
+     "label": "gemini-3-flash-high",
+     "efforts": [
+      "low",
+      "medium",
+      "high"
+     ]
+    },
+    {
+     "id": "gemini-3-flash-low",
+     "label": "gemini-3-flash-low",
+     "efforts": [
+      "low",
+      "medium",
+      "high"
+     ]
+    }
+   ],
+   "truncated": false
+  }
+ },
+ "audit": [
+  {
+   "ts": 1789994996.0,
+   "kind": "spawn",
+   "agent": "a7",
+   "provider": "claude",
+   "model": "claude-haiku-4-5",
+   "cwd": "D:/work/api-server",
+   "tier": "bulk",
+   "reasons": [
+    "explicit"
+   ],
+   "owner": "a5",
+   "parent": "a5",
+   "workspace": "w-api",
+   "goal": "write unit tests for the parser",
+   "paths": [
+    "src/*"
+   ],
+   "effort": "low",
+   "effort_applied": "low"
+  },
+  {
+   "ts": 1789995070.0,
+   "kind": "spawn",
+   "agent": "a5",
+   "provider": "claude",
+   "model": "claude-opus-4-1",
+   "cwd": "D:/work/api-server",
+   "tier": "hard",
+   "reasons": [
+    "explicit"
+   ],
+   "owner": "dashboard",
+   "parent": null,
+   "workspace": "w-api",
+   "goal": "fix flaky CI job",
+   "paths": [
+    "src/*",
+    "README.md",
+    "lib/auth.py"
+   ],
+   "effort": "high",
+   "effort_applied": "high"
+  },
+  {
+   "ts": 1789995248.0,
+   "kind": "spawn",
+   "agent": "a4",
+   "provider": "claude",
+   "model": "claude-haiku-4-5",
+   "cwd": "D:/work/web-client",
+   "tier": "standard",
+   "reasons": [
+    "explicit"
+   ],
+   "owner": "a2",
+   "parent": "a2",
+   "workspace": "w-web",
+   "goal": "write unit tests for the parser",
+   "paths": [
+    "README.md"
+   ],
+   "effort": "medium",
+   "effort_applied": "medium"
+  },
+  {
+   "ts": 1789995946.0,
+   "kind": "spawn",
+   "agent": "a8",
+   "provider": "agy",
+   "model": "gemini-3-flash-low",
+   "cwd": "D:/work/web-client",
+   "tier": "standard",
+   "reasons": [
+    "explicit"
+   ],
+   "owner": "dashboard",
+   "parent": null,
+   "workspace": "w-web",
+   "goal": "port scripts to python 3.10",
+   "paths": [
+    "README.md",
+    "src/*",
+    "tests/*"
+   ],
+   "effort": "low",
+   "effort_applied": "low"
+  },
+  {
+   "ts": 1789996518.0,
+   "kind": "spawn",
+   "agent": "a9",
+   "provider": "codex",
+   "model": "gpt-5",
+   "cwd": "D:/work/api-server",
+   "tier": "hard",
+   "reasons": [
+    "explicit"
+   ],
+   "owner": "dashboard",
+   "parent": null,
+   "workspace": "w-api",
+   "goal": "profile startup time",
+   "paths": [
+    "tests/*",
+    "README.md"
+   ],
+   "effort": "high",
+   "effort_applied": "high"
+  },
+  {
+   "ts": 1789997800.0,
+   "kind": "guard",
+   "agent": "a3",
+   "decision": "escalate",
+   "why": "path outside cwd: C:/Windows/x",
+   "tool": "Bash",
+   "input": "type C:/Windows/x"
+  },
+  {
+   "ts": 1789997857.0,
+   "kind": "spawn",
+   "agent": "a2",
+   "provider": "agy",
+   "model": "gemini-3-pro-high",
+   "cwd": "D:/work/web-client",
+   "tier": "bulk",
+   "reasons": [
+    "explicit"
+   ],
+   "owner": "dashboard",
+   "parent": null,
+   "workspace": "w-web",
+   "goal": "fix flaky CI job",
+   "paths": [],
+   "effort": "high",
+   "effort_applied": "high"
+  },
+  {
+   "ts": 1789997900.0,
+   "kind": "guard",
+   "agent": "a1",
+   "decision": "escalate",
+   "why": "path outside cwd: C:/Windows/x",
+   "tool": "Bash",
+   "input": "type C:/Windows/x"
+  },
+  {
+   "ts": 1789998000.0,
+   "kind": "guard",
+   "agent": "a6",
+   "decision": "escalate",
+   "why": "path outside cwd: C:/Windows/x",
+   "tool": "Bash",
+   "input": "type C:/Windows/x"
+  },
+  {
+   "ts": 1789998318.0,
+   "kind": "spawn",
+   "agent": "a1",
+   "provider": "agy",
+   "model": "gemini-3-flash-low",
+   "cwd": "D:/work/api-server",
+   "tier": "standard",
+   "reasons": [
+    "explicit"
+   ],
+   "owner": "dashboard",
+   "parent": null,
+   "workspace": "w-api",
+   "goal": "refactor the auth module",
+   "paths": [
+    "tests/*",
+    "README.md"
+   ],
+   "effort": "low",
+   "effort_applied": "low"
+  },
+  {
+   "ts": 1789998896.0,
+   "kind": "spawn",
+   "agent": "a3",
+   "provider": "claude",
+   "model": "claude-sonnet-4-5",
+   "cwd": "D:/work/api-server",
+   "tier": "standard",
+   "reasons": [
+    "explicit"
+   ],
+   "owner": "a1",
+   "parent": "a1",
+   "workspace": "w-api",
+   "goal": "profile startup time",
+   "paths": [
+    "docs/*"
+   ],
+   "effort": "low",
+   "effort_applied": "low"
+  },
+  {
+   "ts": 1789999436.0,
+   "kind": "spawn",
+   "agent": "a6",
+   "provider": "claude",
+   "model": "claude-sonnet-4-5",
+   "cwd": "D:/work/web-client",
+   "tier": "bulk",
+   "reasons": [
+    "explicit"
+   ],
+   "owner": "a2",
+   "parent": "a2",
+   "workspace": "w-web",
+   "goal": "migrate config to TOML",
+   "paths": [
+    "lib/auth.py",
+    "src/*",
+    "docs/*"
+   ],
+   "effort": null,
+   "effort_applied": null
+  },
+  {
+   "ts": 1789999570.0,
+   "kind": "spawn",
+   "agent": "a10",
+   "provider": "claude",
+   "model": "claude-opus-4-1",
+   "cwd": "D:/work/web-client",
+   "tier": "standard",
+   "reasons": [
+    "explicit"
+   ],
+   "owner": "a8",
+   "parent": "a8",
+   "workspace": "w-web",
+   "goal": "refactor the auth module",
+   "paths": [],
+   "effort": "medium",
+   "effort_applied": "medium"
+  },
+  {
+   "ts": 1789999910.0,
+   "kind": "provider_toggle",
+   "provider": "agy",
+   "enabled": true,
+   "by": "dashboard"
+  },
+  {
+   "ts": 1789999960.0,
+   "kind": "guard",
+   "agent": "a5",
+   "decision": "escalate",
+   "why": "risky action: 'git push origin main'",
+   "tool": "Bash",
+   "input": "git push origin main"
+  }
+ ],
+ "timeline": {
+  "from": 1789994996.0,
+  "to": 1790000000.0,
+  "truncated": false,
+  "agents": [
+   {
+    "id": "a5",
+    "provider": "claude",
+    "model": "claude-opus-4-1",
+    "created": 1789995070.0,
+    "ended": null
+   },
+   {
+    "id": "a7",
+    "provider": "claude",
+    "model": "claude-haiku-4-5",
+    "created": 1789994996.0,
+    "ended": 1789999900.0
+   },
+   {
+    "id": "a8",
+    "provider": "agy",
+    "model": "gemini-3-flash-low",
+    "created": 1789995946.0,
+    "ended": null
+   },
+   {
+    "id": "a10",
+    "provider": "claude",
+    "model": "claude-opus-4-1",
+    "created": 1789999570.0,
+    "ended": null
+   },
+   {
+    "id": "a9",
+    "provider": "codex",
+    "model": "gpt-5",
+    "created": 1789996518.0,
+    "ended": null
+   },
+   {
+    "id": "a2",
+    "provider": "agy",
+    "model": "gemini-3-pro-high",
+    "created": 1789997857.0,
+    "ended": null
+   },
+   {
+    "id": "a4",
+    "provider": "claude",
+    "model": "claude-haiku-4-5",
+    "created": 1789995248.0,
+    "ended": null
+   },
+   {
+    "id": "a6",
+    "provider": "claude",
+    "model": "claude-sonnet-4-5",
+    "created": 1789999436.0,
+    "ended": null
+   },
+   {
+    "id": "a1",
+    "provider": "agy",
+    "model": "gemini-3-flash-low",
+    "created": 1789998318.0,
+    "ended": null
+   },
+   {
+    "id": "a3",
+    "provider": "claude",
+    "model": "claude-sonnet-4-5",
+    "created": 1789998896.0,
+    "ended": null
+   }
+  ],
+  "items": [
+   {
+    "a": "a7",
+    "k": "turn",
+    "t0": 1789995001.0,
+    "t1": 1789995098.0,
+    "ok": false,
+    "int": false
+   },
+   {
+    "a": "a7",
+    "k": "tool",
+    "t0": 1789995003.0,
+    "t1": 1789995018.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a5",
+    "k": "turn",
+    "t0": 1789995075.0,
+    "t1": 1789995290.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a5",
+    "k": "tool",
+    "t0": 1789995077.0,
+    "t1": 1789995087.0,
+    "tool": "Edit",
+    "ok": true
+   },
+   {
+    "a": "a5",
+    "k": "tool",
+    "t0": 1789995088.0,
+    "t1": 1789995092.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a5",
+    "k": "tool",
+    "t0": 1789995093.0,
+    "t1": 1789995099.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": "a7",
+    "k": "turn",
+    "t0": 1789995138.0,
+    "t1": 1789995288.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a7",
+    "k": "tool",
+    "t0": 1789995140.0,
+    "t1": 1789995145.0,
+    "tool": "Read",
+    "ok": false
+   },
+   {
+    "a": "a7",
+    "k": "tool",
+    "t0": 1789995146.0,
+    "t1": 1789995152.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a7",
+    "k": "tool",
+    "t0": 1789995153.0,
+    "t1": 1789995161.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a4",
+    "k": "turn",
+    "t0": 1789995253.0,
+    "t1": 1789995487.0,
+    "ok": false,
+    "int": false
+   },
+   {
+    "a": "a4",
+    "k": "tool",
+    "t0": 1789995255.0,
+    "t1": 1789995264.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a4",
+    "k": "tool",
+    "t0": 1789995265.0,
+    "t1": 1789995280.0,
+    "tool": "Bash",
+    "ok": false
+   },
+   {
+    "a": "a4",
+    "k": "tool",
+    "t0": 1789995281.0,
+    "t1": 1789995288.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a7",
+    "k": "turn",
+    "t0": 1789995326.0,
+    "t1": 1789995614.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a7",
+    "k": "tool",
+    "t0": 1789995328.0,
+    "t1": 1789995339.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": "a5",
+    "k": "turn",
+    "t0": 1789995340.0,
+    "t1": 1789995473.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a5",
+    "k": "tool",
+    "t0": 1789995342.0,
+    "t1": 1789995354.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a5",
+    "k": "turn",
+    "t0": 1789995504.0,
+    "t1": 1789995656.0,
+    "ok": true,
+    "int": true
+   },
+   {
+    "a": "a4",
+    "k": "turn",
+    "t0": 1789995529.0,
+    "t1": 1789995629.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a7",
+    "k": "turn",
+    "t0": 1789995627.0,
+    "t1": 1789995845.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a7",
+    "k": "tool",
+    "t0": 1789995629.0,
+    "t1": 1789995643.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a7",
+    "k": "tool",
+    "t0": 1789995644.0,
+    "t1": 1789995649.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a4",
+    "k": "turn",
+    "t0": 1789995673.0,
+    "t1": null,
+    "ok": null,
+    "int": false
+   },
+   {
+    "a": "a4",
+    "k": "tool",
+    "t0": 1789995675.0,
+    "t1": 1789995686.0,
+    "tool": "Edit",
+    "ok": true
+   },
+   {
+    "a": "a4",
+    "k": "tool",
+    "t0": 1789995687.0,
+    "t1": 1789995691.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a4",
+    "k": "tool",
+    "t0": 1789995692.0,
+    "t1": 1789995696.0,
+    "tool": "WebFetch",
+    "ok": true
+   },
+   {
+    "a": "a4",
+    "k": "tool",
+    "t0": 1789995697.0,
+    "t1": 1789995710.0,
+    "tool": "Write",
+    "ok": false
+   },
+   {
+    "a": "a5",
+    "k": "turn",
+    "t0": 1789995714.0,
+    "t1": 1789995780.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a5",
+    "k": "tool",
+    "t0": 1789995716.0,
+    "t1": 1789995723.0,
+    "tool": "Edit",
+    "ok": true
+   },
+   {
+    "a": "a5",
+    "k": "tool",
+    "t0": 1789995724.0,
+    "t1": 1789995728.0,
+    "tool": "Edit",
+    "ok": true
+   },
+   {
+    "a": "a5",
+    "k": "turn",
+    "t0": 1789995831.0,
+    "t1": 1789996037.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a5",
+    "k": "tool",
+    "t0": 1789995833.0,
+    "t1": 1789995834.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": "a7",
+    "k": "turn",
+    "t0": 1789995872.0,
+    "t1": 1789995982.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a8",
+    "k": "turn",
+    "t0": 1789995951.0,
+    "t1": 1789996250.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a8",
+    "k": "tool",
+    "t0": 1789995953.0,
+    "t1": 1789995968.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a8",
+    "k": "tool",
+    "t0": 1789995969.0,
+    "t1": 1789995979.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a7",
+    "k": "turn",
+    "t0": 1789995991.0,
+    "t1": 1789996191.0,
+    "ok": true,
+    "int": true
+   },
+   {
+    "a": "a5",
+    "k": "turn",
+    "t0": 1789996069.0,
+    "t1": null,
+    "ok": null,
+    "int": false
+   },
+   {
+    "a": "a5",
+    "k": "tool",
+    "t0": 1789996071.0,
+    "t1": 1789996085.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": "a5",
+    "k": "tool",
+    "t0": 1789996086.0,
+    "t1": 1789996097.0,
+    "tool": "WebFetch",
+    "ok": true
+   },
+   {
+    "a": "a8",
+    "k": "turn",
+    "t0": 1789996296.0,
+    "t1": 1789996471.0,
+    "ok": false,
+    "int": false
+   },
+   {
+    "a": "a8",
+    "k": "tool",
+    "t0": 1789996298.0,
+    "t1": 1789996302.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a8",
+    "k": "tool",
+    "t0": 1789996303.0,
+    "t1": 1789996316.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a8",
+    "k": "tool",
+    "t0": 1789996317.0,
+    "t1": 1789996326.0,
+    "tool": "Edit",
+    "ok": true
+   },
+   {
+    "a": "a8",
+    "k": "turn",
+    "t0": 1789996486.0,
+    "t1": null,
+    "ok": null,
+    "int": false
+   },
+   {
+    "a": "a8",
+    "k": "tool",
+    "t0": 1789996488.0,
+    "t1": 1789996499.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": "a8",
+    "k": "tool",
+    "t0": 1789996500.0,
+    "t1": 1789996506.0,
+    "tool": "Edit",
+    "ok": true
+   },
+   {
+    "a": "a8",
+    "k": "tool",
+    "t0": 1789996507.0,
+    "t1": 1789996519.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a8",
+    "k": "tool",
+    "t0": 1789996520.0,
+    "t1": 1789996525.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a9",
+    "k": "turn",
+    "t0": 1789996523.0,
+    "t1": 1789996681.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a9",
+    "k": "tool",
+    "t0": 1789996525.0,
+    "t1": 1789996531.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a9",
+    "k": "tool",
+    "t0": 1789996532.0,
+    "t1": 1789996546.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": "a9",
+    "k": "tool",
+    "t0": 1789996547.0,
+    "t1": 1789996559.0,
+    "tool": "WebFetch",
+    "ok": true
+   },
+   {
+    "a": "a9",
+    "k": "turn",
+    "t0": 1789996712.0,
+    "t1": 1789996740.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a9",
+    "k": "tool",
+    "t0": 1789996714.0,
+    "t1": 1789996726.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a9",
+    "k": "tool",
+    "t0": 1789996727.0,
+    "t1": 1789996737.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a9",
+    "k": "turn",
+    "t0": 1789996759.0,
+    "t1": 1789996804.0,
+    "ok": false,
+    "int": false
+   },
+   {
+    "a": "a9",
+    "k": "tool",
+    "t0": 1789996761.0,
+    "t1": 1789996767.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a9",
+    "k": "turn",
+    "t0": 1789996850.0,
+    "t1": 1789996984.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a9",
+    "k": "tool",
+    "t0": 1789996852.0,
+    "t1": 1789996855.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a9",
+    "k": "turn",
+    "t0": 1789997021.0,
+    "t1": 1789997127.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a9",
+    "k": "tool",
+    "t0": 1789997023.0,
+    "t1": 1789997037.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": null,
+    "k": "post",
+    "t": 1789997033.0,
+    "id": 1,
+    "kind": "handoff",
+    "ws": "w-api"
+   },
+   {
+    "a": "a9",
+    "k": "tool",
+    "t0": 1789997038.0,
+    "t1": 1789997046.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a9",
+    "k": "tool",
+    "t0": 1789997047.0,
+    "t1": 1789997059.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a9",
+    "k": "turn",
+    "t0": 1789997162.0,
+    "t1": null,
+    "ok": null,
+    "int": false
+   },
+   {
+    "a": "a9",
+    "k": "tool",
+    "t0": 1789997164.0,
+    "t1": 1789997174.0,
+    "tool": "WebFetch",
+    "ok": true
+   },
+   {
+    "a": "a9",
+    "k": "tool",
+    "t0": 1789997175.0,
+    "t1": 1789997190.0,
+    "tool": "Edit",
+    "ok": true
+   },
+   {
+    "a": "a9",
+    "k": "tool",
+    "t0": 1789997191.0,
+    "t1": 1789997203.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a9",
+    "k": "tool",
+    "t0": 1789997204.0,
+    "t1": 1789997216.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": null,
+    "k": "post",
+    "t": 1789997367.0,
+    "id": 7,
+    "kind": "done",
+    "ws": "w-web"
+   },
+   {
+    "a": null,
+    "k": "post",
+    "t": 1789997652.0,
+    "id": 3,
+    "kind": "blocked",
+    "ws": "w-api"
+   },
+   {
+    "a": "a3",
+    "k": "esc",
+    "t": 1789997800.0,
+    "id": "ee6c8",
+    "state": "timeout"
+   },
+   {
+    "a": "a2",
+    "k": "turn",
+    "t0": 1789997862.0,
+    "t1": 1789998158.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a2",
+    "k": "tool",
+    "t0": 1789997864.0,
+    "t1": 1789997874.0,
+    "tool": "Read",
+    "ok": false
+   },
+   {
+    "a": "a2",
+    "k": "tool",
+    "t0": 1789997875.0,
+    "t1": 1789997887.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a2",
+    "k": "tool",
+    "t0": 1789997888.0,
+    "t1": 1789997896.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": "a2",
+    "k": "tool",
+    "t0": 1789997897.0,
+    "t1": 1789997909.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "esc",
+    "t": 1789997900.0,
+    "id": "e1949",
+    "state": "deny"
+   },
+   {
+    "a": null,
+    "k": "post",
+    "t": 1789997921.0,
+    "id": 9,
+    "kind": "handoff",
+    "ws": "w-web"
+   },
+   {
+    "a": null,
+    "k": "post",
+    "t": 1789997936.0,
+    "id": 4,
+    "kind": "blocked",
+    "ws": "w-api"
+   },
+   {
+    "a": "a6",
+    "k": "esc",
+    "t": 1789998000.0,
+    "id": "ec5da",
+    "state": "allow"
+   },
+   {
+    "a": "a2",
+    "k": "turn",
+    "t0": 1789998169.0,
+    "t1": 1789998401.0,
+    "ok": false,
+    "int": false
+   },
+   {
+    "a": "a2",
+    "k": "tool",
+    "t0": 1789998171.0,
+    "t1": 1789998176.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a2",
+    "k": "tool",
+    "t0": 1789998177.0,
+    "t1": 1789998188.0,
+    "tool": "Edit",
+    "ok": true
+   },
+   {
+    "a": "a2",
+    "k": "tool",
+    "t0": 1789998189.0,
+    "t1": 1789998194.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "turn",
+    "t0": 1789998323.0,
+    "t1": 1789998583.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789998325.0,
+    "t1": 1789998329.0,
+    "tool": "Grep",
+    "ok": false
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789998330.0,
+    "t1": 1789998345.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a2",
+    "k": "turn",
+    "t0": 1789998419.0,
+    "t1": 1789998544.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a2",
+    "k": "tool",
+    "t0": 1789998421.0,
+    "t1": 1789998424.0,
+    "tool": "WebFetch",
+    "ok": false
+   },
+   {
+    "a": "a2",
+    "k": "tool",
+    "t0": 1789998425.0,
+    "t1": 1789998435.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": "a2",
+    "k": "tool",
+    "t0": 1789998436.0,
+    "t1": 1789998438.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a2",
+    "k": "turn",
+    "t0": 1789998598.0,
+    "t1": 1789998735.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a1",
+    "k": "turn",
+    "t0": 1789998634.0,
+    "t1": 1789998770.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789998636.0,
+    "t1": 1789998648.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789998649.0,
+    "t1": 1789998657.0,
+    "tool": "Read",
+    "ok": false
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789998658.0,
+    "t1": 1789998664.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a2",
+    "k": "turn",
+    "t0": 1789998747.0,
+    "t1": 1789998950.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a2",
+    "k": "tool",
+    "t0": 1789998749.0,
+    "t1": 1789998752.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a2",
+    "k": "tool",
+    "t0": 1789998753.0,
+    "t1": 1789998757.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "turn",
+    "t0": 1789998830.0,
+    "t1": 1789999044.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789998832.0,
+    "t1": 1789998834.0,
+    "tool": "WebFetch",
+    "ok": false
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789998835.0,
+    "t1": 1789998850.0,
+    "tool": "Edit",
+    "ok": true
+   },
+   {
+    "a": "a3",
+    "k": "turn",
+    "t0": 1789998901.0,
+    "t1": 1789999045.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a2",
+    "k": "turn",
+    "t0": 1789999006.0,
+    "t1": 1789999173.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a2",
+    "k": "tool",
+    "t0": 1789999008.0,
+    "t1": 1789999023.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a2",
+    "k": "tool",
+    "t0": 1789999024.0,
+    "t1": 1789999033.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "turn",
+    "t0": 1789999055.0,
+    "t1": 1789999333.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789999057.0,
+    "t1": 1789999060.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789999061.0,
+    "t1": 1789999070.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789999071.0,
+    "t1": 1789999084.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a3",
+    "k": "turn",
+    "t0": 1789999077.0,
+    "t1": 1789999229.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a3",
+    "k": "tool",
+    "t0": 1789999079.0,
+    "t1": 1789999094.0,
+    "tool": "WebFetch",
+    "ok": true
+   },
+   {
+    "a": "a3",
+    "k": "tool",
+    "t0": 1789999095.0,
+    "t1": 1789999102.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a3",
+    "k": "turn",
+    "t0": 1789999261.0,
+    "t1": 1789999525.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a3",
+    "k": "tool",
+    "t0": 1789999263.0,
+    "t1": 1789999270.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a3",
+    "k": "tool",
+    "t0": 1789999271.0,
+    "t1": 1789999286.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "turn",
+    "t0": 1789999342.0,
+    "t1": 1789999373.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789999344.0,
+    "t1": 1789999356.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789999357.0,
+    "t1": 1789999367.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "turn",
+    "t0": 1789999403.0,
+    "t1": null,
+    "ok": null,
+    "int": false
+   },
+   {
+    "a": "a6",
+    "k": "turn",
+    "t0": 1789999441.0,
+    "t1": 1789999500.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a3",
+    "k": "turn",
+    "t0": 1789999537.0,
+    "t1": 1789999833.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a3",
+    "k": "tool",
+    "t0": 1789999539.0,
+    "t1": 1789999549.0,
+    "tool": "WebFetch",
+    "ok": true
+   },
+   {
+    "a": "a10",
+    "k": "turn",
+    "t0": 1789999575.0,
+    "t1": 1789999778.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a10",
+    "k": "tool",
+    "t0": 1789999577.0,
+    "t1": 1789999592.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a10",
+    "k": "tool",
+    "t0": 1789999593.0,
+    "t1": 1789999595.0,
+    "tool": "Edit",
+    "ok": true
+   },
+   {
+    "a": "a10",
+    "k": "tool",
+    "t0": 1789999596.0,
+    "t1": 1789999609.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a10",
+    "k": "tool",
+    "t0": 1789999610.0,
+    "t1": 1789999619.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a10",
+    "k": "turn",
+    "t0": 1789999785.0,
+    "t1": 1790000029.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a10",
+    "k": "tool",
+    "t0": 1789999787.0,
+    "t1": 1789999800.0,
+    "tool": "WebFetch",
+    "ok": false
+   },
+   {
+    "a": "a3",
+    "k": "turn",
+    "t0": 1789999845.0,
+    "t1": 1789999925.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a3",
+    "k": "tool",
+    "t0": 1789999847.0,
+    "t1": 1789999856.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": "a3",
+    "k": "tool",
+    "t0": 1789999857.0,
+    "t1": 1789999870.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a3",
+    "k": "tool",
+    "t0": 1789999871.0,
+    "t1": 1789999873.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a3",
+    "k": "tool",
+    "t0": 1789999874.0,
+    "t1": 1789999888.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a5",
+    "k": "esc",
+    "t": 1789999960.0,
+    "id": "e27bd",
+    "state": "pending"
+   },
+   {
+    "a": "a3",
+    "k": "turn",
+    "t0": 1789999971.0,
+    "t1": null,
+    "ok": null,
+    "int": false
+   },
+   {
+    "a": "a3",
+    "k": "tool",
+    "t0": 1789999973.0,
+    "t1": 1789999978.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a3",
+    "k": "tool",
+    "t0": 1789999979.0,
+    "t1": 1789999980.0,
+    "tool": "WebFetch",
+    "ok": true
+   },
+   {
+    "a": "a3",
+    "k": "tool",
+    "t0": 1789999981.0,
+    "t1": 1789999990.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": "a3",
+    "k": "tool",
+    "t0": 1789999991.0,
+    "t1": 1790000001.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a10",
+    "k": "turn",
+    "t0": 1790000077.0,
+    "t1": 1790000108.0,
+    "ok": false,
+    "int": false
+   },
+   {
+    "a": "a10",
+    "k": "tool",
+    "t0": 1790000079.0,
+    "t1": 1790000089.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": "a10",
+    "k": "tool",
+    "t0": 1790000090.0,
+    "t1": 1790000095.0,
+    "tool": "Edit",
+    "ok": true
+   },
+   {
+    "a": "a10",
+    "k": "tool",
+    "t0": 1790000096.0,
+    "t1": 1790000103.0,
+    "tool": "Write",
+    "ok": true
+   },
+   {
+    "a": "a10",
+    "k": "turn",
+    "t0": 1790000145.0,
+    "t1": null,
+    "ok": null,
+    "int": false
+   }
+  ]
+ }
+}

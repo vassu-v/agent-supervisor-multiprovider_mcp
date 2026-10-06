@@ -1,0 +1,32 @@
+/* Timeline swimlanes. Geometry comes from JS (style.setProperty); here is
+   tone, shape and responsive rules only, theme vars only. The view renders
+   plain positioned marks until the lead links this file. */
+.tl-wrap { min-width: 0; }
+.tl-wrap h2 { margin: 0 0 var(--sp-3); font-size: var(--fs-15); }
+.tl-spans { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.tl-spans button[aria-pressed="true"] { background: var(--c-surface-2); border-color: var(--c-rail); font-weight: var(--fw-semibold); }
+.tl-lane { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: var(--sp-3); align-items: center; min-height: 22px; margin-bottom: var(--sp-2); }
+.tl-id { font-family: var(--font-mono); font-size: var(--fs-12); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl-track { position: relative; height: 18px; background: var(--c-surface); border: var(--line-hair) solid var(--c-line); border-radius: var(--radius-1); overflow: hidden; }
+.tl-rail { display: block; background: var(--c-rail); opacity: .35; }
+.tl-marks { position: absolute; inset: 0; }
+.mk { display: block; border-radius: 1px; }
+.mk-busy { background: var(--c-busy); }
+.mk-tool { width: 2px; height: 6px; background: var(--c-rail); }
+.mk-guard, .mk-esc { width: 3px; height: 12px; background: var(--c-danger); }
+.mk-esc { border-radius: 50%; }
+.mk-busy.mk-err, .mk-tool.mk-err { background: var(--c-danger); }
+.mk-post { width: 3px; height: 12px; background: var(--c-lane-q); }
+.mk-bucket { height: 8px; background: var(--c-text-muted); opacity: .8; }
+.mk-now { display: block; background: var(--c-text); opacity: .8; }
+.mk:focus-visible { outline: var(--focus-ring) solid var(--c-focus); outline-offset: 1px; }
+.tl-wrap table { border-collapse: collapse; font-size: var(--fs-12); font-variant-numeric: tabular-nums; margin-top: var(--sp-3); }
+.tl-wrap th, .tl-wrap td { border: var(--line-hair) solid var(--c-line); padding: 3px 10px; text-align: right; }
+.tl-wrap th:first-child { text-align: left; font-family: var(--font-mono); }
+@media (max-width: 760px) {
+  .tl-lane { grid-template-columns: minmax(0, 1fr); }
+  .tl-id, .mk-tool { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tl-wrap *, .tl-wrap *::before, .tl-wrap *::after { animation: none; transition: none; }
+}

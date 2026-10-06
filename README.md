@@ -19,23 +19,40 @@ $ python agentctl.py send <id> "also cover the timeout case" --mode interrupt   
 $ python agentctl.py stop <id> --reason "wrong environment"
 ```
 
-<p align="center"><img src="docs/assets/dashboard.jpg" alt="The Switchyard dashboard: workspace tabs, an agent tree, a green announcements lane, a pink open-questions lane and a pending guard decision" width="860"></p>
-<p align="center"><sub>Scripted demo agents, so no model was called. Two clients are attached to the <code>shop</code> workspace.</sub></p>
+<p align="center"><img src="docs/assets/dashboard.png" alt="The Switchyard dashboard: one yard per workspace, each agent a row on a track with its status, provider and model, and the green announcements lane beside it" width="860"></p>
+<p align="center"><sub>Scripted demo agents, so no model was called. Four agents in the <code>shop</code> yard, one in <code>blog</code>.</sub></p>
+
+<p align="center"><b>
+<a href="#start-in-4-commands">Start</a> ·
+<a href="#steer-without-restarting">Steer</a> ·
+<a href="#let-risky-commands-wait-for-you">Guard</a> ·
+<a href="#spend-less-on-bulk-work">Spend</a> ·
+<a href="#run-many-agents-in-one-repo">Many agents</a> ·
+<a href="#pick-your-providers">Providers</a> ·
+<a href="#drive-it-from-your-agent">MCP</a> ·
+<a href="#know-the-limits">Limits</a>
+</b></p>
 
 ## Start in 4 commands
-You need Python 3.10+ and one logged-in provider CLI. Per-OS steps: [docs/install.md](docs/install.md).
+<p align="center"><img src="docs/assets/sec-start.svg" alt="Clone, serve, spawn" width="100%"></p>
+
+**You need Python 3.10+ and one logged-in provider CLI.** Per-OS steps: [docs/install.md](docs/install.md).
 
 ```bash
 git clone https://github.com/vassu-v/agent-supervisor-multiprovider_mcp switchyard && cd switchyard
-python agentctl.py serve        # leave running; dashboard at http://127.0.0.1:8765
-python agentctl.py providers    # ready / off / not installed / needs login
+python agentctl.py serve        # leave running
+python agentctl.py dashboard    # opens the dashboard in your browser
 python agentctl.py spawn "write primes.py, run it, reply with the output" --cwd ./demo --provider auto
 ```
 
-Next: [change course while an agent works](#steer-without-restarting).
+> `python agentctl.py providers` shows what is ready, off, not installed or needs a login.
+
+**Next →** [change course while an agent works](#steer-without-restarting)
 
 ## Steer without restarting
-Pick a mode per message. The session and its context survive.
+<p align="center"><img src="docs/assets/sec-steer.svg" alt="Queue, steer, interrupt" width="100%"></p>
+
+**Pick a mode per message. The session and its context survive.**
 
 | You want | Command |
 |---|---|
@@ -44,40 +61,47 @@ Pick a mode per message. The session and its context survive.
 | Change direction now | `send <id> "..." --mode interrupt` |
 | Cancel, send nothing | `interrupt <id>` |
 
-Next: [risky commands](#let-risky-commands-wait-for-you). Per-provider detail: [docs/providers.md](docs/providers.md).
+**Next →** [risky commands](#let-risky-commands-wait-for-you) · per-provider detail: [docs/providers.md](docs/providers.md)
 
 ## Let risky commands wait for you
-Every tool call is checked against [`orch/policy.json`](orch/policy.json). Edits apply with no restart.
+<p align="center"><img src="docs/assets/sec-guard.svg" alt="Pass, escalate, block" width="100%"></p>
+
+**Every tool call is checked against [`orch/policy.json`](orch/policy.json). Edits apply with no restart.**
 
 | Verdict | Examples | Effect |
 |---|---|---|
-| pass | reads, tests, local git | none |
-| escalate | `git push`, `.env`, external POST | agent pauses; stops after 10 min |
-| block | `format`, `rm -rf /`, `shutdown` | agent stops at once |
+| ✅ pass | reads, tests, local git | none |
+| ⏸ escalate | `git push`, `.env`, external POST | agent pauses, you allow or deny, stops after 10 min |
+| ⛔ block | `format`, `rm -rf /`, `shutdown` | agent stops at once |
 
-Next: [cheap agents](#spend-less-on-bulk-work). Patterns and timeouts: [docs/policy.md](docs/policy.md).
+**Next →** [cheap agents](#spend-less-on-bulk-work) · patterns and timeouts: [docs/policy.md](docs/policy.md)
 
 ## Spend less on bulk work
-`provider: auto` picks a provider and model from a tier. Hard-tier results are flagged for review.
+<p align="center"><img src="docs/assets/sec-spend.svg" alt="Bulk on cheap models, hard flagged for review" width="100%"></p>
+
+**`provider: auto` picks a provider and model from a tier. Hard-tier results are flagged for review.**
 
 ```json
 "bulk": { "candidates": ["agy:*flash*medium", "opencode:opencode/*free*", "claude:haiku"] },
 "hard": { "candidates": ["claude:opus", "claude:sonnet", "agy:*pro*high", "codex:*"], "review": true }
 ```
 
-Words like *auth*, *secret* and *production* bump a task to `hard`. Preview with `agentctl.py route "<task>"`.
+> Words like *auth*, *secret* and *production* bump a task to `hard`. Preview with `agentctl.py route "<task>"`.
+> Want a specific model and thinking level? Say so: `--provider claude --model opus --effort high`. It is never rerouted.
 
-Next: [many agents in one repo](#run-many-agents-in-one-repo).
+**Next →** [many agents in one repo](#run-many-agents-in-one-repo)
 
 ## Run many agents in one repo
-Each agent has its own identity, a place in a tree, and a shared board.
+<p align="center"><img src="docs/assets/sec-many.svg" alt="Agent tree and shared board" width="100%"></p>
+
+**Each agent has its own identity, a place in a tree, and a shared board.**
 
 | Piece | What you get |
 |---|---|
-| Workspace, agent tree | One git root, children under parents |
-| Green lane | Announcements: started, done, blocked |
-| Pink lane | Open questions any agent can answer |
-| Briefing | Peers and goals, advisory only |
+| 🌿 Workspace, agent tree | One git root, children under parents |
+| 🟢 Green lane | Announcements: started, done, blocked |
+| 🩷 Pink lane | Open questions any agent can answer |
+| 📋 Briefing | Peers and goals, advisory only |
 
 ```console
 $ agentctl.py announce "api client done, tests pass" --kind done
@@ -85,35 +109,45 @@ $ agentctl.py ask "which port does the mock server use?"
 $ agentctl.py list --tree
 ```
 
-Next: [providers](#pick-your-providers). Three-agent example: [docs/collaboration.md](docs/collaboration.md).
+**Next →** [providers](#pick-your-providers) · three-agent example: [docs/collaboration.md](docs/collaboration.md)
 
 ## Pick your providers
-Switch off any provider you lack. Model lists come live from each CLI.
+<p align="center"><img src="docs/assets/sec-providers.svg" alt="Provider switches" width="100%"></p>
+
+**Switch off any provider you lack. Model lists come live from each CLI.**
 
 ```bash
 python agentctl.py providers disable codex
 ```
 
-Next: [drive it from your agent](#drive-it-from-your-agent). Config and capabilities: [docs/providers.md](docs/providers.md).
+**Next →** [drive it from your agent](#drive-it-from-your-agent) · config and capabilities: [docs/providers.md](docs/providers.md)
 
 ## Drive it from your agent
-Register the MCP server. The daemon must be running.
+<p align="center"><img src="docs/assets/sec-drive.svg" alt="Your agent to MCP to Switchyard" width="100%"></p>
+
+**Register the MCP server. The daemon must be running.**
 
 ```bash
 claude mcp add switchyard -- python /path/to/switchyard/orch/mcp_bridge.py
 ```
 
-Copy [`skills/switchyard-use`](skills/switchyard-use/SKILL.md) and [`skills/switchyard-setup`](skills/switchyard-setup/SKILL.md) into your agent's skills folder.
+> Copy [`skills/switchyard-use`](skills/switchyard-use/SKILL.md) and [`skills/switchyard-setup`](skills/switchyard-setup/SKILL.md) into your agent's skills folder.
 
-Next: [limits](#know-the-limits). Every tool: [docs/mcp.md](docs/mcp.md).
+**Next →** [limits](#know-the-limits) · every tool: [docs/mcp.md](docs/mcp.md)
 
 ## Know the limits
-- The guard reacts after a tool call starts. It cannot undo. Use a container or VM for isolation.
-- The daemon binds to `127.0.0.1`. Agents run with full permissions and can read the admin token. Never expose the port.
-- Cheaper models make more mistakes. Verify their output.
-- Tested on Windows 11 only. Codex never ran against a real Codex.
+<p align="center"><img src="docs/assets/sec-limits.svg" alt="Local only" width="100%"></p>
 
-Next: [the docs](#read-more). Tokens and scopes: [docs/security.md](docs/security.md).
+**Read this before you trust it with anything you cannot lose.**
+
+| Limit | What to do |
+|---|---|
+| The guard reacts after a tool call starts and cannot undo it | Use a container or VM for real isolation |
+| The daemon binds to `127.0.0.1`; agents run with full permissions and can read the admin token | Never expose the port |
+| Cheaper models make more mistakes | Verify their output |
+| Tested on Windows 11 only; Codex never ran against a real Codex | Treat Linux, macOS and Codex as unverified |
+
+**Next →** [the docs](#read-more) · tokens and scopes: [docs/security.md](docs/security.md)
 
 <details>
 <summary>Coming next (not built yet)</summary>
@@ -125,6 +159,9 @@ Next: [the docs](#read-more). Tokens and scopes: [docs/security.md](docs/securit
 </details>
 
 ## Read more
-Setup: [install](docs/install.md) · [providers](docs/providers.md) · [policy](docs/policy.md) · [security](docs/security.md)
-Use: [mcp](docs/mcp.md) · [collaboration](docs/collaboration.md) · [AGENTS.md](AGENTS.md) · [skills](skills/README.md)
-Design: [PLAN](docs/PLAN.md) · [ROADMAP](docs/ROADMAP.md)
+
+| | |
+|---|---|
+| **Setup** | [install](docs/install.md) · [providers](docs/providers.md) · [policy](docs/policy.md) · [security](docs/security.md) |
+| **Use** | [mcp](docs/mcp.md) · [collaboration](docs/collaboration.md) · [AGENTS.md](AGENTS.md) · [skills](skills/README.md) |
+| **Design** | [PLAN](docs/PLAN.md) · [ROADMAP](docs/ROADMAP.md) |

@@ -14,6 +14,7 @@
   declare --goal "..." [--paths a,b] [--id AID]       set your goal/paths (agents: your own id is implied)
   who [--ws ID]                                       the workspace briefing        ws [PATH]   resolve a path to its workspace
   sessions                                            attached clients
+  dashboard [--no-open]                               print (and open in the browser) http://127.0.0.1:PORT/ui/#t=TOKEN
   list [--ws ID] [--all] [--tree]                     agents (default: everything; --tree indents children under parents)
 Env: ORCH_URL (default http://127.0.0.1:8765), ORCH_TOKEN (default: orch/token.txt), ORCH_AGENT (caller id for audit),
      ORCH_WORKSPACE (default --ws; else the workspace of the current directory), SWITCHYARD_SESSION (session id header)."""
@@ -59,7 +60,7 @@ def call(_path, /, **kw):
             return {"error": f"HTTP {e.code}: {raw[:200].decode('utf-8', 'replace')}"}
 
 
-BOOL_FLAGS = {"sandbox", "refresh", "full", "all", "tree", "json"}
+BOOL_FLAGS = {"sandbox", "refresh", "full", "all", "tree", "json", "no-open"}
 
 
 def flags(args):
@@ -259,6 +260,15 @@ def main():
         print(__doc__)
         return
     cmd, (pos, kw) = sys.argv[1], flags(sys.argv[2:])
+    if cmd == "dashboard":                         # the token travels in the URL fragment, which browsers never send to a server
+        from urllib.parse import urlparse
+        port = urlparse(URL).port or 8765
+        link = f"http://127.0.0.1:{port}/ui/#t={token()}"
+        print(link)
+        if not kw.get("no-open"):
+            import webbrowser
+            webbrowser.open(link)
+        return
     if cmd == "serve":
         sys.path.insert(0, HERE)
         from orch.server import main as serve

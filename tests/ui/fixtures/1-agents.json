@@ -1,0 +1,436 @@
+{
+ "list": [
+  {
+   "id": "a1",
+   "provider": "claude",
+   "model": "claude-haiku-4-5",
+   "cwd": "D:/work/api-server",
+   "tier": "standard",
+   "status": "busy",
+   "owner": "dashboard",
+   "turns": 9,
+   "queued": 2,
+   "usage": {
+    "input": 27438,
+    "output": 43981,
+    "cache_read": 29058
+   },
+   "restarts": 0,
+   "session": "sess-a1",
+   "caps": {
+    "steer": true,
+    "interrupt": true,
+    "usage": true,
+    "native_queue": false
+   },
+   "needs_review": false,
+   "stopped_by": null,
+   "age_s": 2998,
+   "parent": null,
+   "workspace": "w-api",
+   "workspace_name": "api-server",
+   "subdir": "",
+   "goal": "port scripts to python 3.10",
+   "paths": [
+    "docs/*"
+   ],
+   "created": 1789997002.0,
+   "effort": "high",
+   "effort_applied": "high",
+   "effort_warning": null,
+   "last_text": "Working through step 8. Updated the module and re-ran the checks; 7 passed.",
+   "last_event": {
+    "ts": 1789999968.0,
+    "type": "tool_start"
+   },
+   "current_tool": "Write",
+   "turn_t0": 1789999915.0,
+   "pending_escalation": null,
+   "children": [],
+   "depth": 0
+  }
+ ],
+ "workspaces": [
+  {
+   "id": "w-api",
+   "name": "api-server",
+   "root": "D:/work/api-server",
+   "agents": 1,
+   "busy": 1,
+   "live": 1,
+   "sessions": [
+    {
+     "client": "dashboard",
+     "label": null
+    }
+   ]
+  }
+ ],
+ "boards": {
+  "w-api": {
+   "posts": [
+    {
+     "id": 1,
+     "ts": 1789997060.0,
+     "ws": "w-api",
+     "sender": "a1",
+     "sender_kind": "agent",
+     "kind": "blocked",
+     "text": "blocked: profile startup time",
+     "paths": [],
+     "reply_to": null,
+     "thread": null,
+     "status": "closed",
+     "answered_by": null,
+     "about": null,
+     "event": null
+    },
+    {
+     "id": 2,
+     "ts": 1789997354.0,
+     "ws": "w-api",
+     "sender": "a1",
+     "sender_kind": "agent",
+     "kind": "question",
+     "text": "Which config format should a1 use?",
+     "paths": [],
+     "reply_to": null,
+     "thread": null,
+     "status": "open",
+     "answered_by": null,
+     "about": null,
+     "event": null,
+     "stale": true
+    },
+    {
+     "id": 3,
+     "ts": 1789997655.0,
+     "ws": "w-api",
+     "sender": "a1",
+     "sender_kind": "agent",
+     "kind": "done",
+     "text": "done: port scripts to python 3.10",
+     "paths": [],
+     "reply_to": null,
+     "thread": null,
+     "status": "closed",
+     "answered_by": null,
+     "about": null,
+     "event": null
+    },
+    {
+     "id": 4,
+     "ts": 1789997914.0,
+     "ws": "w-api",
+     "sender": "a1",
+     "sender_kind": "agent",
+     "kind": "blocked",
+     "text": "blocked: upgrade dependencies",
+     "paths": [],
+     "reply_to": null,
+     "thread": null,
+     "status": "closed",
+     "answered_by": null,
+     "about": null,
+     "event": null
+    }
+   ],
+   "last": 4,
+   "open_questions": 1
+  }
+ },
+ "escalations": [],
+ "providers": [
+  {
+   "name": "claude",
+   "enabled": true,
+   "installed": true,
+   "path": "C:/tools/claude.exe",
+   "adapter": true,
+   "state": "ready",
+   "caps": {
+    "steer": true,
+    "interrupt": true,
+    "usage": true,
+    "native_queue": false
+   }
+  }
+ ],
+ "models": {
+  "claude": {
+   "enabled": true,
+   "source": "live",
+   "error": null,
+   "total": 3,
+   "matched": 3,
+   "models": [
+    {
+     "id": "claude-sonnet-4-5",
+     "label": "claude-sonnet-4-5",
+     "efforts": [
+      "low",
+      "medium",
+      "high"
+     ]
+    },
+    {
+     "id": "claude-opus-4-1",
+     "label": "claude-opus-4-1",
+     "efforts": [
+      "low",
+      "medium",
+      "high"
+     ]
+    },
+    {
+     "id": "claude-haiku-4-5",
+     "label": "claude-haiku-4-5",
+     "efforts": [
+      "low",
+      "medium",
+      "high"
+     ]
+    }
+   ],
+   "truncated": false
+  }
+ },
+ "audit": [
+  {
+   "ts": 1789997002.0,
+   "kind": "spawn",
+   "agent": "a1",
+   "provider": "claude",
+   "model": "claude-haiku-4-5",
+   "cwd": "D:/work/api-server",
+   "tier": "standard",
+   "reasons": [
+    "explicit"
+   ],
+   "owner": "dashboard",
+   "parent": null,
+   "workspace": "w-api",
+   "goal": "port scripts to python 3.10",
+   "paths": [
+    "docs/*"
+   ],
+   "effort": "high",
+   "effort_applied": "high"
+  },
+  {
+   "ts": 1789999910.0,
+   "kind": "provider_toggle",
+   "provider": "claude",
+   "enabled": true,
+   "by": "dashboard"
+  }
+ ],
+ "timeline": {
+  "from": 1789997002.0,
+  "to": 1790000000.0,
+  "truncated": false,
+  "agents": [
+   {
+    "id": "a1",
+    "provider": "claude",
+    "model": "claude-haiku-4-5",
+    "created": 1789997002.0,
+    "ended": null
+   }
+  ],
+  "items": [
+   {
+    "a": "a1",
+    "k": "turn",
+    "t0": 1789997007.0,
+    "t1": 1789997195.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789997009.0,
+    "t1": 1789997022.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789997023.0,
+    "t1": 1789997025.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789997026.0,
+    "t1": 1789997033.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": null,
+    "k": "post",
+    "t": 1789997060.0,
+    "id": 1,
+    "kind": "blocked",
+    "ws": "w-api"
+   },
+   {
+    "a": "a1",
+    "k": "turn",
+    "t0": 1789997213.0,
+    "t1": 1789997506.0,
+    "ok": false,
+    "int": false
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789997215.0,
+    "t1": 1789997227.0,
+    "tool": "Edit",
+    "ok": false
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789997228.0,
+    "t1": 1789997238.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": null,
+    "k": "post",
+    "t": 1789997354.0,
+    "id": 2,
+    "kind": "question",
+    "ws": "w-api"
+   },
+   {
+    "a": "a1",
+    "k": "turn",
+    "t0": 1789997538.0,
+    "t1": 1789997650.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789997540.0,
+    "t1": 1789997551.0,
+    "tool": "WebFetch",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789997552.0,
+    "t1": 1789997567.0,
+    "tool": "WebFetch",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789997568.0,
+    "t1": 1789997571.0,
+    "tool": "Grep",
+    "ok": true
+   },
+   {
+    "a": null,
+    "k": "post",
+    "t": 1789997655.0,
+    "id": 3,
+    "kind": "done",
+    "ws": "w-api"
+   },
+   {
+    "a": "a1",
+    "k": "turn",
+    "t0": 1789997687.0,
+    "t1": 1789997866.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789997689.0,
+    "t1": 1789997700.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789997701.0,
+    "t1": 1789997703.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789997704.0,
+    "t1": 1789997713.0,
+    "tool": "WebFetch",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789997714.0,
+    "t1": 1789997728.0,
+    "tool": "Bash",
+    "ok": true
+   },
+   {
+    "a": "a1",
+    "k": "turn",
+    "t0": 1789997910.0,
+    "t1": 1789998165.0,
+    "ok": true,
+    "int": false
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789997912.0,
+    "t1": 1789997927.0,
+    "tool": "Read",
+    "ok": true
+   },
+   {
+    "a": null,
+    "k": "post",
+    "t": 1789997914.0,
+    "id": 4,
+    "kind": "blocked",
+    "ws": "w-api"
+   },
+   {
+    "a": "a1",
+    "k": "turn",
+    "t0": 1789998205.0,
+    "t1": null,
+    "ok": null,
+    "int": false
+   },
+   {
+    "a": "a1",
+    "k": "tool",
+    "t0": 1789998207.0,
+    "t1": 1789998209.0,
+    "tool": "Read",
+    "ok": true
+   }
+  ]
+ }
+}

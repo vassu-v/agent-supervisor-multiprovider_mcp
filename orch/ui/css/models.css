@@ -1,0 +1,33 @@
+/* Models view extras: provider switches are in styles.css (.prov, .tog);
+   this file only adds the models list and capability matrix. Colour comes
+   from theme vars only. Wiring (linking this file) is the lead's job; the
+   view falls back to plain lists and tables without it. */
+.view-m-models { min-width: 0; }
+.view-m-models h2 { margin: 0 0 var(--sp-3); font-size: var(--fs-15); }
+.view-m-models h3 { margin: var(--sp-5) 0 var(--sp-2); font-size: var(--fs-13); }
+.m-top { display: flex; align-items: center; gap: var(--sp-3); }
+.m-status { margin: 0; font-variant-numeric: tabular-nums; }
+.m-provs { margin-bottom: var(--sp-2); }
+.m-prov { background: var(--c-surface); border: var(--line-hair) solid var(--c-line); border-radius: var(--radius-2); padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-3); }
+.m-prov.is-off { opacity: .62; }
+.m-pname { margin: 0 0 2px; font-size: var(--fs-13); }
+.m-note { margin: 0 0 var(--sp-2); }
+.m-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.m-model { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--sp-2) var(--sp-4); align-items: baseline; padding: 2px 0; }
+.m-id { overflow-wrap: anywhere; }
+.m-eff { display: inline-flex; align-items: center; gap: 6px; }
+.m-effw { font-size: var(--fs-12); color: var(--c-text-muted); white-space: nowrap; }
+.m-use { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--c-text); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.m-caps { overflow-x: auto; scrollbar-width: thin; }
+.m-caps-t { border-collapse: collapse; font-size: var(--fs-12); font-variant-numeric: tabular-nums; }
+.m-caps-t th, .m-caps-t td { border: var(--line-hair) solid var(--c-line); padding: 3px 10px; text-align: center; }
+.m-caps-t th:first-child, .m-caps-t td:first-child { text-align: left; }
+.m-caps-t th[scope="row"] { font-family: var(--font-mono); font-weight: var(--fw-semibold); }
+.m-caps-t thead th { background: var(--c-surface-2); }
+@media (max-width: 760px) {
+  .m-model { grid-template-columns: minmax(0, 1fr) auto; }
+  .m-eff { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .view-m-models *, .view-m-models *::before, .view-m-models *::after { animation: none; transition: none; }
+}
