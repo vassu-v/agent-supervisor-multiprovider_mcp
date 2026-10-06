@@ -248,6 +248,18 @@ class UiServer(unittest.TestCase):
         self.assertTrue(api(self.d, "GET", f"/api/changes?since={rev}&wait=0")[1]["escalations"])
         api(self.d, "POST", "/api/stop", {"id": "esc-a", "reason": "test done"})
 
+    def test_post_changes_waiter_cap_is_429(self):
+        rev = self.rev()
+        res = []
+        ts = [threading.Thread(target=lambda: res.append(api(self.d, "POST", "/api/changes", {"since": rev, "wait": 3})[0]))
+              for _ in range(8)]
+        for t in ts:
+            t.start()
+        time.sleep(0.8)
+        self.assertEqual(api(self.d, "POST", "/api/changes", {"since": rev, "wait": 1})[0], 429)
+        for t in ts:
+            t.join(10)
+
     def test_providers_caps(self):
         st, rows = api(self.d, "GET", "/api/providers?models=0")
         self.assertEqual(st, 200)
@@ -367,6 +379,17 @@ CORE_SCRIPT = textwrap.dedent("""
         o._bump("audit")
     out["overflow_reset"] = o.wait_changes(1, 0)["reset"]
     out["fresh_ok"] = o.wait_changes(o.rev, 0)["reset"]
+    o.escalations["e1"] = {"id": "e1", "agent": "u1", "state": "pending"}
+    o.escalations["e2"] = {"id": "e2", "agent": "u1", "state": "pending"}
+    out["other_when_two"] = o._other_pending("u1", "e2")
+    o.escalations["e1"]["state"] = "deny"
+    out["other_when_one"] = o._other_pending("u1", "e2")
+    k = []
+    o._bump = lambda kind, key=None: k.append((kind, key))
+    o.board.answer = lambda *a, **kw: (None, {"id": 1})
+    o._wake_for = lambda a: None
+    o.board_answer(5, "x", "t", ws=None)
+    out["null_board_bumps"] = [x for x in k if x[0] == "board"]
     print(json.dumps(out))
 """)
 
@@ -390,6 +413,9 @@ class CoreUnit(unittest.TestCase):
         self.assertLessEqual(o["text_bumps"], 1)                    # 50 text events inside 250 ms -> one bump
         self.assertEqual(o["text_bumps_later"], o["text_bumps"] + 1)
         self.assertEqual(o["waiters"], ["429", "ok", "ok", "ok", "ok", "ok", "ok", "ok", "ok"])
+        self.assertEqual(o["other_when_two"], "e1")                  # an older pending escalation stays visible
+        self.assertIsNone(o["other_when_one"])
+        self.assertEqual(o["null_board_bumps"], [])                  # no board bump with a null workspace
         self.assertTrue(o["overflow_reset"])
         self.assertFalse(o["fresh_ok"])
 

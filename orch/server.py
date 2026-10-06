@@ -367,7 +367,7 @@ class H(BaseHTTPRequestHandler):
         try:
             self._json(api(u.path, body, {}, who))
         except Exception as e:
-            self._json(self._err(e), 400)
+            self._json(self._err(e), 429 if isinstance(e, TooManyWaiters) else 400)
 
     def log_message(self, *a):
         pass

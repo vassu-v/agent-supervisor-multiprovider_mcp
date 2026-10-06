@@ -648,7 +648,9 @@ class Orchestrator:
 
     def board_answer(self, post_id, sender, text, ws=None):
         q, a = self.board.answer(post_id, sender, text, sender_kind=kind_of(sender), ws=ws)
-        self._bump("board", (q or {}).get("ws") or ws)
+        key = (q or {}).get("ws") or ws
+        if key:                                       # never put a null workspace into the change feed
+            self._bump("board", key)
         self._wake_for(a)
         return {"question": q, "answer": a}
 
@@ -948,7 +950,7 @@ class Orchestrator:
             e.update(state=decision, note=note, resolved_by=by, resolved=now())
             ag = self.agents.get(e["agent"])
             if ag is not None and ag.pending_esc == eid:
-                ag.pending_esc = None
+                ag.pending_esc = self._other_pending(ag.id, eid)
         self._bump("esc")
         self._audit("resolve", escalation=eid, decision=decision, by=by, note=note)
         rec = self._get(e["agent"])
@@ -961,6 +963,13 @@ class Orchestrator:
             self.send(rec.id, f"Orchestrator decision: DENIED. {note} Do not perform that action; choose a safe alternative.", "queue", by=by)
         return e
 
+    def _other_pending(self, agent_id, skip):
+        """Id of another still-pending escalation of this agent (so `pending_escalation` never hides one), else None."""
+        for e in list(self.escalations.values()):
+            if e["agent"] == agent_id and e["state"] == "pending" and e["id"] != skip:
+                return e["id"]
+        return None
+
     def _escalation_timeout(self, eid):
         pol = load_policy()["escalation"]
         time.sleep(pol["pending_timeout_s"])
@@ -969,7 +978,7 @@ class Orchestrator:
             e["state"] = "timeout"
             ag = self.agents.get(e["agent"])
             if ag is not None and ag.pending_esc == eid:
-                ag.pending_esc = None
+                ag.pending_esc = self._other_pending(ag.id, eid)
             self._bump("esc")
             self._audit("escalation_timeout", escalation=eid)
             if pol["timeout_action"] == "stop" and ag is not None and ag.created == e.get("agent_created"):
