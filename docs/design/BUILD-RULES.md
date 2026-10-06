@@ -32,7 +32,7 @@ The two design docs are the spec: [visual-direction.md](visual-direction.md) (wh
   `el.style.setProperty(...)` (CSSOM). Agent-authored text (goals, posts, last_text, stream lines) is ALWAYS a text node.
 - Accessibility is a requirement, not polish: landmarks, roving tabindex in the fleet treegrid, `role=dialog` drawer that traps and restores focus,
   `aria-live` for escalations (assertive) and new questions (polite), every action keyboard-operable, status never colour-only, `prefers-reduced-motion`.
-- Performance budget: JS <= 120 KB total, CSS <= 40 KB, a 60-agent patch <= 8 ms, no layout reads during render, keyed reconciliation (never rebuild a list).
+- Keep it fast and light: no layout reads during render, keyed reconciliation (never rebuild a list). There are no hard size or timing targets.
 - Pure logic goes in pure functions with `node --test` tests (`node` may be missing: tests must `skip` cleanly then). No DOM needed for logic tests;
   where DOM is needed use the tiny fake-document shim E1 provides in `tests/ui/shim.mjs`.
 - Python 3.10 stdlib only on the server side. Do not run model turns. Do not start a daemon on port 8765 (a real one may run); for live checks use

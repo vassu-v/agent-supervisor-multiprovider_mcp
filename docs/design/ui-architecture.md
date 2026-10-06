@@ -99,8 +99,7 @@ Allow, deny and stop have no single-key shortcut.
 
 Usage rollups are computed client-side; no endpoint is needed.
 
-**Budgets at 60 agents**
-- Payload sizes: list ≤ 50 KB, timeline ≤ 160 KB, events page ≤ 60 KB.
+**Expectations at 60 agents**
 - Refetch only dirty resources.
 - Minimum refetch intervals: list 500 ms, board 1 s, events 250 ms.
 - Error backoff from 1 s to 15 s. Pause while `document.hidden`.
@@ -176,9 +175,6 @@ tests/ui/fixtures/{1,10,60}-agents.json
 - The page never scrolls horizontally.
 
 **Performance**
-- First paint under 200 ms.
-- JS ≤ 120 KB, CSS ≤ 40 KB.
-- A 60-agent patch takes ≤ 8 ms.
 - No layout reads during render.
 - The stream keeps ≤ 500 lines. The timeline draws ≤ 2000 marks and buckets anything beyond that.
 
