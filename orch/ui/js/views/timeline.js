@@ -38,7 +38,7 @@ export function mount(el, store, api) {
   const params = () => ((store.get().ui && store.get().ui.route && store.get().ui.route.params) || {});
   const span = () => normSpan(params().span);
   const ws = () => (typeof params().ws === 'string' ? params().ws : '');
-  const spans = h('div', { role: 'group', 'aria-label': 'Time span' });
+  const spans = h('div', { class: 'tl-spans', role: 'group', 'aria-label': 'Time span' });
   const btns = {};
   for (const s of SPANS) {
     const b = h('button', { type: 'button', 'data-span': s, 'aria-pressed': s === DEFAULT_SPAN ? 'true' : 'false' }, s);

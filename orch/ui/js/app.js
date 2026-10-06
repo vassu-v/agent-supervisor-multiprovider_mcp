@@ -165,14 +165,17 @@ async function boot() {
   // ---- view in <main>
   let current = null; // { name, cleanup, popScope }
   let mountSeq = 0;
+  let pendingName = null; // view whose module is still loading
   async function showView(name) {
-    if (current && current.name === name) return;
+    if ((current && current.name === name) || pendingName === name) return;
     const seq = ++mountSeq;
+    pendingName = name;
     if (current) { safeCall(current.cleanup); current.popScope(); current = null; }
     const el = h('div', { class: 'view', 'data-view': name });
     main.replaceChildren(el);
     const mod = await loadModule(name);
     if (seq !== mountSeq) return; // the user navigated again while this loaded
+    pendingName = null;
     current = { name, popScope: keys.pushScope(name), cleanup: mountInto(el, mod, name, store, api) };
   }
 
@@ -391,6 +394,7 @@ async function boot() {
     closeDrawer();
     if (current) { safeCall(current.cleanup); current.popScope(); current = null; }
     mountSeq++;
+    pendingName = null;
     store.set({ conn: { state: reason ? 'auth' : 'none', error: reason || '', at: 0 } });
     document.body.classList.add('connecting');
 

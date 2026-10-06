@@ -6,9 +6,7 @@ import { tokens as fmtTokens, ago } from '../core/fmt.js';
 import { railWidth } from './fleet-rail.js';
 import { createRow, updateRow } from './fleet-row.js';
 
-function setText(el, s) {
-  text(el, s);
-}
+const setText = text;
 
 function countSpan(num, label) {
   const b = h('b', null, String(num));
@@ -95,9 +93,11 @@ export function updateYard(sec, y, now, hooks) {
     f.collapsed = y.collapsed;
     f.body.replaceChildren();
     if (y.collapsed) {
-      const btn = on(h('button', { type: 'button', 'aria-expanded': 'false' }, `Show ${y.live} agents`), 'click', () => hooks.toggleYard(y.id));
-      f.body.appendChild(h('div', { class: 'yard-sum' },
-        h('span', { class: 'muted' }, `${y.live} live \u00B7 ${y.busy} busy \u00B7 ${fmtTokens(y.tokens)} tokens`), btn));
+      const btn = on(h('button', { type: 'button', 'aria-expanded': 'false' }), 'click', () => hooks.toggleYard(y.id));
+      const sum = h('span', { class: 'muted' });
+      f.body.appendChild(h('div', { class: 'yard-sum' }, sum, btn));
+      f.sum = sum;
+      f.sumBtn = btn;
     } else {
       const rows = h('div', { class: 'rows', role: 'treegrid', 'aria-label': 'Agents in ' + y.name });
       rows.appendChild(h('div', { class: 'colh', 'aria-hidden': 'true' },
@@ -129,19 +129,22 @@ export function updateYard(sec, y, now, hooks) {
       f.laneCount = laneH.lastChild;
     }
   }
-  if (y.collapsed) return;
+  if (y.collapsed) {
+    setText(f.sum, `${y.live} live \u00B7 ${y.busy} busy \u00B7 ${fmtTokens(y.tokens)} tokens`);
+    setText(f.sumBtn, `Show ${y.live} agents`);
+    return;
+  }
   if (f.W !== W) f.W = W;
-  // Density is part of the key: compact rows have a different shape, so a
-  // density switch rebuilds them instead of patching the wrong structure.
+  // density is part of the key: compact rows have another shape, so a switch rebuilds them
   const key = (vm) => vm.agent.id + (hooks.compact ? '|c' : '');
   list(f.rowlist, y.rows, key,
     (vm) => createRow(vm, f.W, hooks),
     (el, vm) => updateRow(el, vm, f.W, hooks));
-  const foldSig = y.folded ? `fold:${y.deadCount}` : (y.deadCount ? `open:${y.deadCount}` : 'none');
+  const foldSig = y.folded ? `fold:${y.deadCount}` : (y.canFold ? `open:${y.deadCount}` : 'none');
   if (f.foldWrap._sig !== foldSig) {
     f.foldWrap._sig = foldSig;
     f.foldWrap.replaceChildren();
-    if (y.deadCount > 0) {
+    if (y.canFold) {
       const label = y.folded ? `${y.deadCount} finished` : `Hide finished (${y.deadCount})`;
       const btn = on(h('button', { type: 'button', class: 'fold', 'aria-expanded': y.folded ? 'false' : 'true' }, label), 'click', () => hooks.toggleDead(y.id));
       f.foldWrap.appendChild(btn);

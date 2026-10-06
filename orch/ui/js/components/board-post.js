@@ -114,4 +114,5 @@ export function updatePost(node, p, ctx) {
   else if (!stale && badge) badge.remove();
   const form = node.querySelector('.ans');
   if (form) form.hidden = !isOpen(p);
+  else if (isOpen(p)) node.append(answerForm(ctx, p.id));
 }

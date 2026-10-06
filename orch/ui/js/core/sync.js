@@ -16,6 +16,7 @@ const AUDIT_N = 200;
 export function createSync(store, api) {
   const seenQuestions = new Set();
   const boardsLoaded = new Set();
+  const boardSeq = new Map();
   let auditStale = true;
 
   const ok = (r) => r && !r.error;
@@ -64,7 +65,10 @@ export function createSync(store, api) {
 
   async function board(ws) {
     if (!safeId(ws)) return;
+    const seq = (boardSeq.get(ws) || 0) + 1;
+    boardSeq.set(ws, seq);
     const r = await api.get('/api/board?ws=' + encodeURIComponent(ws) + '&n=' + BOARD_N);
+    if (boardSeq.get(ws) !== seq) return; // a newer fetch for this board is in flight or done
     if (!markConn(r) || !r || !Array.isArray(r.posts)) return;
     const first = !boardsLoaded.has(ws);
     boardsLoaded.add(ws);

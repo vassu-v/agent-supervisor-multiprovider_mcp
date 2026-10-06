@@ -121,6 +121,7 @@ export function buildFleet(s) {
   const ctx = { now, escalated: escSet, blocked };
   const asked = openQuestions(posts);
 
+  const deadWanted = String(params.st || '').split(',').includes('dead');
   const only = params.ws && params.ws !== 'all' ? params.ws : null;
   const groups = byWorkspace(rows, s.workspaces || []).filter((g) => g.agents.length > 0 && (!only || g.id === only));
   const totalLive = rows.filter(isLive).length;
@@ -130,8 +131,10 @@ export function buildFleet(s) {
     const ordered = attention(g.agents, ctx);
     const nodes = tree(ordered);
     const dead = nodes.filter((n) => n.agent.status === 'dead');
-    const folded = g.agents.length > FOLD_ABOVE && dead.length > 0 && !openDead.has(g.id);
-    const shown = folded ? nodes.filter((n) => n.agent.status !== 'dead') : nodes;
+    const canFold = g.agents.length > FOLD_ABOVE && dead.length > 0 && !deadWanted;
+    const folded = canFold && !openDead.has(g.id);
+    // re-derive: orphaned children become roots
+    const shown = folded ? tree(ordered.filter((a) => a.status !== 'dead')) : nodes;
     let tokens = 0;
     let busy = 0;
     let live = 0;
@@ -161,8 +164,9 @@ export function buildFleet(s) {
       tokens,
       collapsed,
       folded,
+      canFold,
       deadCount: dead.length,
-      maxDepth: shown.reduce((m, n) => Math.max(m, n.agent.depth || n.depth || 0), 0),
+      maxDepth: shown.reduce((m, n) => Math.max(m, n.depth || 0), 0),
       board: lastAnnouncements(posts, g.id),
       rows: shown.map((n) => {
         const a = n.agent;

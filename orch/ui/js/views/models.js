@@ -1,10 +1,9 @@
-// #/models: provider switches, discovered models + efforts, per-model
-// rollups, caps matrix. Store is read-only; fetched while open.
+// #/models: provider switches, models + efforts, rollups, caps matrix.
 
 import { h, on, text, list } from '../core/h.js';
 import { bind } from '../core/keys.js';
 import { tokens as fmtTokens, safeId } from '../core/fmt.js';
-import { MODELS_URL, modelRollup, capsTable, shouldRefresh, toggleBody } from '../components/models-rollup.js';
+import { MODELS_URL, modelRollup, capsTable, shouldRefresh, toggleBody, REFRESH_MS } from '../components/models-rollup.js';
 
 const GLYPH = {agy:'g-agy',claude:'g-claude',opencode:'g-opencode',codex:'g-codex'};
 
@@ -24,7 +23,6 @@ export function mount(el, store, api) {
     h('h3', null, 'Capabilities'), capsEl);
   el.appendChild(root);
 
-  // Chips follow the header pattern in app.js: role=switch + struck name.
   function paintChip(node, p) {
     node.classList.toggle('off', !p.enabled);
     text(node.querySelector('.st-word'),
@@ -154,7 +152,10 @@ export function mount(el, store, api) {
     }
   }
   function paintRefresh() {
-    refreshBtn.disabled = !shouldRefresh(S.last, Date.now());
+    const wait = S.last + REFRESH_MS - Date.now();
+    refreshBtn.disabled = wait > 0;
+    clearTimeout(S.timer);
+    if (wait > 0) S.timer = setTimeout(paintRefresh, wait);
   }
 
   async function load() {
@@ -189,7 +190,6 @@ export function mount(el, store, api) {
   paintSections();
   paintCaps(S.provs);
   paintStatus();
-  paintRefresh();
 
   const offP = store.subscribe((s) => s.providers, (rows) => {
     S.provs = rows || [];
@@ -207,6 +207,7 @@ export function mount(el, store, api) {
 
   function unmount() {
     S.dead = true;
+    clearTimeout(S.timer);
     S.req += 1;
     offP();
     offA();

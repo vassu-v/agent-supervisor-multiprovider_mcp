@@ -19,7 +19,7 @@ export function modelRollup(agents) {
   for (const a of agents || []) {
     const provider = a && a.provider ? String(a.provider) : '';
     const model = a && a.model ? String(a.model) : '';
-    const key = provider + '' + model;
+    const key = provider + '\u0001' + model;
     let r = by.get(key);
     if (!r) {
       r = { provider, model, key, agents: 0, tokens: 0 };
