@@ -218,6 +218,12 @@ def api(path, body, query, who):
         out = providers.set_enabled(body["name"], _bool(body["enabled"]))
         o._audit("provider_toggle", provider=body["name"], enabled=out["enabled"], by=by)
         return out
+    if path == "/api/hook":                       # admin-only (executes commands): not in identity.AGENT_ALLOWED
+        return o.hooks.add(body["id"], body["on"], body["run"], _bool(body.get("repeat", False)))
+    if path == "/api/hooks":
+        return o.hooks.list()
+    if path == "/api/unhook":
+        return o.hooks.remove(body["hook"])
     if path == "/api/health":
         return {"ok": True, "providers": o.available(), "agents": len(o.agents)}
     raise KeyError(path)
@@ -225,7 +231,7 @@ def api(path, body, query, who):
 
 PUBLIC = {"/api/health"}
 WRITES = {"/api/spawn", "/api/send", "/api/interrupt", "/api/stop", "/api/resolve", "/api/provider", "/api/hello",
-          "/api/declare", "/api/announce", "/api/ask", "/api/answer"}
+          "/api/declare", "/api/announce", "/api/ask", "/api/answer", "/api/hook", "/api/unhook"}
 MAX_BODY = 1_000_000
 CSP = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; "
        "img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")      # legacy dashboard (inline code)

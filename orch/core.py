@@ -10,7 +10,7 @@ import threading
 import time
 import uuid
 
-from orch import identity, providers  # noqa: E402
+from orch import hooks as hookmod, identity, providers  # noqa: E402
 from orch import workspace as wsmod  # noqa: E402
 from orch.board import Board, kind_of, sanitize  # noqa: E402
 from orch.store import Store  # noqa: E402
@@ -304,6 +304,7 @@ class Orchestrator:
         self._chfloor = 0                         # highest rev that fell out of _chlog
         self._waiters = 0
         self._text_bump = {}                      # aid -> monotonic time of the last coalesced text bump
+        self.hooks = hookmod.Hooks(self)          # completion hooks (in memory; a restart clears them)
 
     # ------------------------------------------------------------ helpers
     def _load(self, provider):
@@ -750,6 +751,7 @@ class Orchestrator:
             rec.queue.clear()
         if not was_dead:
             self._ended(rec, "stopped", f"{aid} stopped by {_safe_line(by, 40)}", quote=reason)
+            self.hooks.fire(rec, "stopped")
         return {"result": "stopped"}
 
     def _ended(self, rec, event, text, quote=None):
@@ -789,6 +791,7 @@ class Orchestrator:
                         rec.restarts += 1
                 if died:
                     self._ended(rec, "dead", f"{rec.id} died unexpectedly")
+                    self.hooks.fire(rec, "dead")
             elif t == "error":
                 n = self._err_count[rec.id] = self._err_count.get(rec.id, 0) + 1
                 if n <= 3:                                  # a noisy adapter must not flood the board
@@ -861,6 +864,8 @@ class Orchestrator:
                        "instructions: decide yourself what, if anything, to do.")
         if nxt is not None:
             threading.Thread(target=self._deliver_quiet, args=(rec, nxt), daemon=True).start()
+        elif ev.get("stop") != "cancelled" and rec.status == "idle":
+            self.hooks.fire(rec, "idle" if ev.get("ok") is not False else "error", ev.get("text") or "")
 
     def _check_forbidden(self, rec):
         """Harness-specific notes files (CLAUDE.md, GEMINI.md...) are NOT forbidden: if an agent or user changed one,
