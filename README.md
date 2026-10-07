@@ -42,14 +42,14 @@ $ python agentctl.py stop <id> --reason "wrong environment"
 git clone https://github.com/vassu-v/agent-supervisor-multiprovider_mcp switchyard && cd switchyard
 python agentctl.py serve        # leave running
 python agentctl.py dashboard    # opens the dashboard in your browser
-python agentctl.py spawn "write primes.py, run it, reply with the output" --cwd ./demo --provider auto
+python agentctl.py spawn "write primes.py, run it, reply with the output" --cwd ../switchyard-demo --provider auto
 ```
 
 > `python agentctl.py providers` shows what is ready, off, not installed or needs a login.
 
 ```console
-$ python agentctl.py spawn "write primes.py" --cwd ./demo --wait     # blocks, then prints the agent's reply
-started a1 on agy:gemini-3.8-flash-high (tier standard) in ./demo
+$ python agentctl.py spawn "write primes.py" --cwd ../switchyard-demo --wait     # blocks, then prints the agent's reply
+started a1 on agy:gemini-3.8-flash-high (tier standard) in ../switchyard-demo
 ...
 ```
 

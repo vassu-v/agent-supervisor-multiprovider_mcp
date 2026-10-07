@@ -25,3 +25,7 @@ tests/codex/schema/
 tests/mcp_qa/
 tests/live_collab*/
 tests/live_effort/
+
+# demo folders (never commit what the quick start creates)
+/demo/
+/switchyard-demo/

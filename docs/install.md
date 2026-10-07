@@ -71,7 +71,7 @@ Change the port with `ORCH_PORT`.
 ```bash
 python agentctl.py providers        # ready / off / not installed / needs login / degraded
 python agentctl.py models agy       # model ids agy reports now
-python agentctl.py spawn "write primes.py, run it, reply with the output" --cwd ./demo --provider auto
+python agentctl.py spawn "write primes.py, run it, reply with the output" --cwd ../switchyard-demo --provider auto
 ```
 
 The directory is created if its parent exists. The agent is confined to it by the guard, not a sandbox.
