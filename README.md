@@ -53,7 +53,7 @@ started a1 on agy:gemini-3.8-flash-high (tier standard) in ../switchyard-demo
 ...
 ```
 
-> **What Switchyard writes into your project.** If the working directory has no `AGENTS.md`, it creates one: a shared notes file that every agent reads and appends to. An existing `AGENTS.md` is never replaced. Agents add notes under `## Agent notes`, and nothing is deleted. Logs live in `logs/` inside the Switchyard folder, not in your project.
+> **What Switchyard writes into your project.** One folder, `.switchyard/`, in the agent's working directory. It holds `AGENTS.md`, the shared notes every agent reads and appends to under `## Agent notes`, plus a `.gitignore` so it never shows up in `git status`. Your own `AGENTS.md`, `CLAUDE.md` and other files are never touched. Logs live in `logs/` inside the Switchyard folder, not in your project.
 > Add `--json` to any command for the full machine-readable output.
 
 **Next →** [change course while an agent works](#steer-without-restarting)
@@ -176,7 +176,7 @@ claude mcp add switchyard -- python /path/to/switchyard/orch/mcp_bridge.py
 
 - Advisory file claims with expiring leases
 - Edit history per agent, with diffs
-- Notes in SQLite, rendered to `AGENTS.md`
+- Notes in SQLite, rendered to `.switchyard/AGENTS.md`
 - Hook enforcement and opt-in worktrees
 </details>
 

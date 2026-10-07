@@ -58,9 +58,9 @@ python agentctl.py resolve <eid> allow|deny --note "..."
 
 ## AGENTS.md mirroring
 
-`AGENTS.md` is the shared notes file. The daemon creates it in each agent's directory.
+`.switchyard/AGENTS.md` is the shared notes file (`shared_notes_file`). The daemon creates it, with a `.gitignore`, in each agent's directory. The project's own `AGENTS.md` is never touched.
 If a harness writes `CLAUDE.md`, `GEMINI.md`, `QWEN.md`, `.cursorrules` or `copilot-instructions.md` (`mirror_files`), nothing is blocked.
-New lines are copied into `AGENTS.md`.
+New lines are copied into the shared notes file.
 One snapshot is kept per directory. A change is mirrored once, credited to the agent when no other agent is busy there, else `unknown`.
 Notes kept in SQLite and rendered per workspace are not built yet. See [ROADMAP.md](ROADMAP.md).
 

@@ -26,9 +26,10 @@ if os.environ.get("SWITCHYARD_FAKE"):                                    # zero-
 
 PREAMBLE = """[orchestrator rules - follow silently]
 1. Work ONLY inside your working directory ({cwd}). Do not read/write outside it unless the task says so.
-2. Read {notes} in this directory first if it exists. Record durable learnings (decisions, commands, gotchas) under a
-   '## Agent notes' section in {notes} - it is the single shared notes file for every agent/harness. Prefer it over
-   CLAUDE.md/GEMINI.md (anything you add to those is mirrored into {notes} automatically).
+2. Read {notes} (relative to your working directory) first if it exists. Record durable learnings (decisions, commands, gotchas)
+   under a '## Agent notes' section in {notes} - it is the single shared notes file for every agent/harness, and it is kept apart
+   from the project's own AGENTS.md. Do not edit the project's AGENTS.md/CLAUDE.md/GEMINI.md unless the task asks you to
+   (anything new in CLAUDE.md/GEMINI.md is mirrored into {notes} automatically).
 3. If you see another agent doing something harmful, stop it: "{py}" "{orch_cli}" stop <agent_id> --reason "<why>" (the CLI finds its own token; a reason is required).
 4. Your agent id is {aid}. Dangerous actions (git push, deleting trees, secrets, external POSTs, installs) get escalated - prefer safe alternatives.
 5. Providers in this fleet (only use available ones):
@@ -457,8 +458,13 @@ class Orchestrator:
         notes = load_policy()["shared_notes_file"]
         np = os.path.join(cwd, notes)
         if not os.path.exists(np):
+            os.makedirs(os.path.dirname(np), exist_ok=True)
+            ign = os.path.join(os.path.dirname(np), ".gitignore")      # keeps `git status` clean; delete it to commit the notes
+            if not os.path.exists(ign):
+                with open(ign, "w", encoding="utf-8") as f:
+                    f.write("*" + "\n")
             with open(np, "w", encoding="utf-8") as f:
-                f.write("# AGENTS.md\n\nShared notes for every agent working in this directory.\n\n## Agent notes\n")
+                f.write("# AGENTS.md\n\nShared notes for every agent working in this directory (kept by Switchyard; the project's own AGENTS.md is untouched).\n\n## Agent notes\n")
         with self.lock:
             key = os.path.normcase(cwd)
             if key not in self._dir_snap:
@@ -869,7 +875,7 @@ class Orchestrator:
 
     def _check_forbidden(self, rec):
         """Harness-specific notes files (CLAUDE.md, GEMINI.md...) are NOT forbidden: if an agent or user changed one,
-        leave it alone and mirror the newly added lines into AGENTS.md ('## Agent notes') so knowledge ends up in one place.
+        leave it alone and mirror the newly added lines into the shared notes file ('## Agent notes') so knowledge ends up in one place.
         One snapshot per directory: a change is mirrored exactly once, however many agents share the directory. It is credited
         to the agent only when it is the only one active there; otherwise to 'unknown'."""
         key = os.path.normcase(rec.cwd)
@@ -893,7 +899,7 @@ class Orchestrator:
                         f.write(f"\n<!-- mirrored from {fn} by agent {who} -->\n" + "\n".join(added) + "\n")
                     self._audit("mirrored_to_agents_md", agent=who, file=fn, lines=len(added))
                     self._on_event(rec, {"type": "guard", "decision": "mirrored",
-                                         "why": f"{len(added)} line(s) from {fn} copied to AGENTS.md"})
+                                         "why": f"{len(added)} line(s) from {fn} copied to the shared notes"})
 
     # ------------------------------------------------------------ guard / escalation
     def _check_guard(self, rec, ev):

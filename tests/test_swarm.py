@@ -172,7 +172,7 @@ class Swarm(unittest.TestCase):
         self.assertFalse(overs, f"wake storm: (agent, turns, bound) {overs}")
 
         for dd in (d1, d2):
-            p = os.path.join(dd, "AGENTS.md")
+            p = os.path.join(dd, ".switchyard", "AGENTS.md")
             self.assertTrue(os.path.exists(p))
             with open(p, encoding="utf-8") as f:
                 txt = f.read()

@@ -34,7 +34,7 @@ TOOLS = {
     "agent_spawn": (
         "Start a coding agent working in directory `cwd`. COST: a model turn starts immediately and bills the chosen provider. "
         "Declare `goal` and `paths` so peers see what it is for. It runs with permission prompts off, confined to that directory, so give "
-        "each agent its own directory. The daemon writes an AGENTS.md (shared notes) into it if missing. `cwd` is created if its "
+        "each agent its own directory. The daemon keeps shared notes in `.switchyard/AGENTS.md` inside it (created if missing). `cwd` is created if its "
         "parent exists. provider='auto' (default) routes by `tier`: " + TIERS + " (default standard; tasks mentioning auth, secrets, "
         "payment, production or delete are bumped to `hard`, which routes to the costly Claude track and marks the result as "
         "needing review). Name a provider+model explicitly to control cost. Returns the agent id and the routing decision; poll "
