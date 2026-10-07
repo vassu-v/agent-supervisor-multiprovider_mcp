@@ -53,7 +53,8 @@ Digests reach agents framed as information, not instructions. Only two events wa
 ## Honest limits
 
 - The guard is detect-and-react. A tool call has started when the guard sees it. It stops quickly and cannot undo.
-- Agents can read `orch/token.txt`. The guard escalates any tool input that names `orch/token.txt`, `policy.json` or `config.json`, but that is pattern matching, not a lock. The dashboard page at `/` also embeds the admin token for any local caller. An agent that gets it holds admin power.
+- Agents can read `orch/token.txt`. The guard escalates any tool input that names `orch/token.txt`, `policy.json` or `config.json`, but that is pattern matching, not a lock. The new dashboard at `/ui/` no longer embeds the token (it arrives in the URL fragment from `agentctl dashboard` and is kept in `sessionStorage`), but the old page at `/legacy` still does, and `orch/token.txt` is readable by any process of the same user. An agent that gets the token holds admin power.
+- Completion hooks run commands, so setting, listing and removing them is admin-only (agent tokens get 403). They run without a shell, in the agent's directory, with a 60 s timeout; agent output reaches the command only through environment variables.
 - The OpenCode server behind each agent has no password on its loopback port. Another local process could drive that agent.
 - Only agy's sandbox is wired in (`spawn --sandbox`, CLI only). Codex starts with full access.
 - For hard isolation, run agents in a container or VM.

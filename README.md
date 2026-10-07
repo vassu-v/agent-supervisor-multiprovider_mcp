@@ -47,6 +47,15 @@ python agentctl.py spawn "write primes.py, run it, reply with the output" --cwd 
 
 > `python agentctl.py providers` shows what is ready, off, not installed or needs a login.
 
+```console
+$ python agentctl.py spawn "write primes.py" --cwd ./demo --wait     # blocks, then prints the agent's reply
+started a1 on agy:gemini-3.8-flash-high (tier standard) in ./demo
+...
+```
+
+> **What Switchyard writes into your project.** If the working directory has no `AGENTS.md`, it creates one: a shared notes file that every agent reads and appends to. An existing `AGENTS.md` is never replaced. Agents add notes under `## Agent notes`, and nothing is deleted. Logs live in `logs/` inside the Switchyard folder, not in your project.
+> Add `--json` to any command for the full machine-readable output.
+
 **Next →** [change course while an agent works](#steer-without-restarting)
 
 ## Steer without restarting
@@ -60,6 +69,17 @@ python agentctl.py spawn "write primes.py, run it, reply with the output" --cwd 
 | Adjust mid-turn | `send <id> "..." --mode steer` |
 | Change direction now | `send <id> "..." --mode interrupt` |
 | Cancel, send nothing | `interrupt <id>` |
+
+**Wait for an agent, or hook it.** Scripts and other agents do not have to poll.
+
+| You want | Command |
+|---|---|
+| Block until the agent is idle, then print its reply | `wait <id>` (exit code 0 ok, 1 failed, 2 timeout) |
+| Spawn and block in one step | `spawn "..." --wait` |
+| Run a command when an agent finishes | `hook <id> --on done --run "python notify.py"` |
+| See or remove hooks | `hooks` · `unhook <hook-id>` |
+
+> Hooks run without a shell, once by default (add `--repeat`), and only you can set them, not agents. The command gets `SWITCHYARD_AGENT`, `SWITCHYARD_STATUS`, `SWITCHYARD_EVENT` and `SWITCHYARD_RESULT` in its environment. A daemon restart clears them.
 
 **Next →** [risky commands](#let-risky-commands-wait-for-you) · per-provider detail: [docs/providers.md](docs/providers.md)
 
@@ -144,6 +164,8 @@ claude mcp add switchyard -- python /path/to/switchyard/orch/mcp_bridge.py
 |---|---|
 | The guard reacts after a tool call starts and cannot undo it | Use a container or VM for real isolation |
 | The daemon binds to `127.0.0.1`; agents run with full permissions and can read the admin token | Never expose the port |
+| Closing the `serve` terminal ends every agent (they die with the daemon) | Run it in a terminal you keep open |
+| Every provider adds its own base context (system prompt, tool definitions) to each turn, and Switchyard adds about 1,700 characters of rules on top. Small tasks can still use tens of thousands of tokens, mostly the provider's own | Judge cost from your provider's usage, not task size |
 | Cheaper models make more mistakes | Verify their output |
 | Tested on Windows 11 only; Codex never ran against a real Codex | Treat Linux, macOS and Codex as unverified |
 
