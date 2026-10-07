@@ -1,3 +1,3 @@
 @AGENTS.md
 
-Decision history and full project context: `docs/PLAN.md`.
+Decision history and project context: `docs/internal/PLAN.md` (local only, not committed).

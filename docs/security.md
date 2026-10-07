@@ -58,6 +58,5 @@ Digests reach agents framed as information, not instructions. Only two events wa
 - The OpenCode server behind each agent has no password on its loopback port. Another local process could drive that agent.
 - Only agy's sandbox is wired in (`spawn --sandbox`, CLI only). Codex starts with full access.
 - For hard isolation, run agents in a container or VM.
-- Open items: [PLAN.md](PLAN.md#open-items).
 
 Next: [mcp.md](mcp.md).

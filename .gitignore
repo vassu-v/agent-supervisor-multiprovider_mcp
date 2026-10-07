@@ -29,3 +29,6 @@ tests/live_effort/
 # demo folders (never commit what the quick start creates)
 /demo/
 /switchyard-demo/
+
+# internal planning, specs and agent contracts: local only
+/docs/internal/

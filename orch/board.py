@@ -1,4 +1,4 @@
-"""Workspace board (SPEC-0.3 section 4): posting rules, sanitising, digests and wake rules.
+"""Workspace board (0.3 design): posting rules, sanitising, digests and wake rules.
 
 Senders are identity strings supplied by the caller from the VERIFIED identity (SPEC 1):
 `agent:<aid>` | `session:<client>/<label>` | `external` | `dashboard` | `daemon`. A bare aid is also
@@ -157,7 +157,7 @@ class Board:
 
     # ---- posting -----------------------------------------------------------------------------------
     def post(self, ws, sender, sender_kind, kind, text, paths=None, reply_to=None, about=None, event=None):
-        """Insert a post after enforcing every SPEC-0.3 limit. Returns the stored post dict. Raises ValueError."""
+        """Insert a post after enforcing every 0.3 design limit. Returns the stored post dict. Raises ValueError."""
         return self._post(ws, sender, sender_kind, kind, text, paths, reply_to, about, event, _internal=False)
 
     def _post(self, ws, sender, sender_kind, kind, text, paths, reply_to, about, event, _internal):

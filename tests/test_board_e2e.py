@@ -1,4 +1,4 @@
-"""Board end-to-end tests (SPEC-0.3 section 4) against a real isolated daemon with scripted fake agents (no model, no cost).
+"""Board end-to-end tests (0.3 design) against a real isolated daemon with scripted fake agents (no model, no cost).
 
 Every assertion about what an agent was TOLD reads <cwd>/.fake_inbox.jsonl (each message the daemon delivered).
 Run: python tests/test_board_e2e.py      (one daemon for the whole class; every test uses its own repo = workspace)

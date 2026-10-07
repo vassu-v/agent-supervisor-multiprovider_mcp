@@ -1,4 +1,4 @@
-"""Workspace resolution (SPEC-0.3 section 2). Python 3.10 stdlib only."""
+"""Workspace resolution (0.3 design). Python 3.10 stdlib only."""
 import hashlib
 import os
 import re

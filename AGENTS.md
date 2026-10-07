@@ -6,8 +6,8 @@ new lines here.
 
 ## What this repo is
 Switchyard: a local daemon that runs many coding agents (agy, claude, opencode, codex) as persistent sessions you can
-spawn, watch, steer, interrupt and stop. Stdlib-only Python 3.10+. Start with [`README.md`](README.md); every design
-decision is in [`docs/PLAN.md`](docs/PLAN.md).
+spawn, watch, steer, interrupt and stop. Stdlib-only Python 3.10+. Start with [`README.md`](README.md); design
+decisions are kept in a local-only `docs/internal/PLAN.md` (not committed).
 
 ## Connect an agent
 (Commands say `python`; use `py -3.10` or `python3` if that is how Python 3.10+ starts on your machine.)

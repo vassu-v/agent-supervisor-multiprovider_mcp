@@ -62,6 +62,6 @@ python agentctl.py resolve <eid> allow|deny --note "..."
 If a harness writes `CLAUDE.md`, `GEMINI.md`, `QWEN.md`, `.cursorrules` or `copilot-instructions.md` (`mirror_files`), nothing is blocked.
 New lines are copied into the shared notes file.
 One snapshot is kept per directory. A change is mirrored once, credited to the agent when no other agent is busy there, else `unknown`.
-Notes kept in SQLite and rendered per workspace are not built yet. See [ROADMAP.md](ROADMAP.md).
+Notes kept in SQLite and rendered per workspace are not built yet.
 
 Next: [security.md](security.md).

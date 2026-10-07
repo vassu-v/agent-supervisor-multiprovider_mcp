@@ -1,5 +1,5 @@
 /* Switchyard structure. Colour, type, space and motion come from theme.css (tokens); this file only uses var(--*).
-   Component rules are ported from docs/design/mockup-yard.html; class names match it so views can use them as-is. */
+   Component rules come from the Yard design mockup; the class names are kept so views can use them as-is. */
 @import url("theme.css");
 
 /* ================= base ================= */

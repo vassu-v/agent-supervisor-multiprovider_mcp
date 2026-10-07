@@ -1,4 +1,4 @@
-"""Identity, sessions and hierarchy helpers (SPEC-0.3 sections 1 and 3). Python 3.10 stdlib only."""
+"""Identity, sessions and hierarchy helpers (0.3 design). Python 3.10 stdlib only."""
 import hashlib
 import hmac
 import re
