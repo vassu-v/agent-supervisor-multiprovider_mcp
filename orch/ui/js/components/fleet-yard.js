@@ -1,40 +1,17 @@
 // One workspace yard: header counts, treegrid rows, dead fold and the last-5
-// announcements rail. Yards and rows are keyed lists; the header is patched.
+// board rail (fleet-lanes.js). Yards and rows are keyed lists; the header is patched.
 
 import { h, on, text, list } from '../core/h.js';
-import { tokens as fmtTokens, ago } from '../core/fmt.js';
+import { tokens as fmtTokens } from '../core/fmt.js';
 import { railWidth } from './fleet-rail.js';
 import { createRow, updateRow } from './fleet-row.js';
+import { createBoard, updateBoard } from './fleet-lanes.js';
 
 const setText = text;
 
 function countSpan(num, label) {
   const b = h('b', null, String(num));
   return { el: h('span', null, b, ' ' + label), num: b };
-}
-
-function senderOf(p) {
-  const s = String(p.sender || '');
-  return s.startsWith('agent:') ? s.slice(6) : s;
-}
-
-function createPost(p, now) {
-  const kind = h('span', { class: 'kind' }, p.kind || 'info');
-  const snd = h('span', { class: 'snd' }, senderOf(p));
-  const tm = h('span', null, ago(p.ts, now));
-  const tx = h('p', { class: 'tx' }, p.text || '');
-  const art = h('article', { class: 'post', 'data-from': senderOf(p) },
-    h('div', { class: 'h' }, kind, snd, tm), tx);
-  art._p = { kind, snd, tm, tx, id: p.id };
-  return art;
-}
-
-function updatePost(art, p, now) {
-  const r = art._p;
-  setText(r.kind, p.kind || 'info');
-  setText(r.snd, senderOf(p));
-  setText(r.tm, ago(p.ts, now));
-  setText(r.tx, p.text || '');
 }
 
 function fillClients(wrap, sessions) {
@@ -107,26 +84,14 @@ export function updateYard(sec, y, now, hooks) {
       rows.appendChild(rowlist);
       const foldWrap = h('div');
       rows.appendChild(foldWrap);
-      const board = h('aside', { class: 'board', 'aria-label': 'Announcements for ' + y.name });
-      const laneH = h('div', { class: 'lane-h lane-ann' },
-        h('span', { class: 'sw' }), 'Announcements', h('span', { class: 'c' }, String(y.board.length)));
-      const posts = h('div', { class: 'posts' });
-      board.append(laneH, posts);
-      on(posts, 'pointerover', (ev) => {
-        let n = ev.target;
-        while (n && n !== posts && !(n.getAttribute && n.getAttribute('data-from'))) n = n.parentNode;
-        const id = n && n !== posts ? n.getAttribute('data-from') : null;
-        hooks.hl(id);
-      });
-      on(posts, 'pointerout', () => hooks.hl(null));
+      const board = createBoard(y, hooks);
       const wrap = h('div', { class: 'yard-b' }, rows, board);
       f.body.appendChild(wrap);
       f.W = 0;
       f.rows = rows;
       f.rowlist = rowlist;
       f.foldWrap = foldWrap;
-      f.posts = posts;
-      f.laneCount = laneH.lastChild;
+      f.board = board;
     }
   }
   if (y.collapsed) {
@@ -134,7 +99,7 @@ export function updateYard(sec, y, now, hooks) {
     setText(f.sumBtn, `Show ${y.live} agents`);
     return;
   }
-  if (f.W !== W) f.W = W;
+  if (f.W !== W) { f.W = W; f.rows.style.setProperty('--rail-w', W + 'px'); }   // grid gutter follows the rail depth
   // density is part of the key: compact rows have another shape, so a switch rebuilds them
   const key = (vm) => vm.agent.id + (hooks.compact ? '|c' : '');
   list(f.rowlist, y.rows, key,
@@ -150,8 +115,5 @@ export function updateYard(sec, y, now, hooks) {
       f.foldWrap.appendChild(btn);
     }
   }
-  list(f.posts, y.board, (p) => p.id,
-    (p) => createPost(p, now),
-    (el, p) => updatePost(el, p, now));
-  setText(f.laneCount, String(y.board.length));
+  updateBoard(f.board, y, now, hooks);
 }

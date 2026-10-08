@@ -1,3 +1,3 @@
 @AGENTS.md
 
-Decision history and project context: `docs/internal/PLAN.md` (local only, not committed).
+Decision history and project context live in the maintainers' local notes, which are not part of the repo.

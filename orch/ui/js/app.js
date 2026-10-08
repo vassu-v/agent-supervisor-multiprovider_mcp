@@ -216,6 +216,7 @@ async function boot() {
   function applyRoute(route) {
     if (document.body.classList.contains('connecting')) return; // no views until there is a token
     setUi({ route });
+    document.body.dataset.view = route.view;   // css hides the pinned escalation bar on its own view
     showView(route.view);
     if (route.params.agent) openDrawer(); else closeDrawer();
     if (route.view === 'audit') sync.refresh('audit');
@@ -235,8 +236,8 @@ async function boot() {
     if (conn.state === 'auth') { text(meta, 'token rejected'); return; }
     if (conn.state === 'none') { text(meta, 'not connected'); return; }
     if (conn.state === 'connecting') { text(meta, 'connecting…'); return; }
-    const parts = [`${t.agents} agents`, `${t.busy} busy`, `${waiting} waiting on you`, `${nws} workspaces`, `${fmtTokens(t.tokens)} tokens`];
-    if (conn.state === 'down') parts.push('daemon unreachable, showing last data');
+    const parts = conn.state === 'down' ? ['daemon unreachable, showing last data'] : [];
+    parts.push(`${t.agents} agents`, `${t.busy} busy`, `${waiting} waiting on you`, `${nws} workspaces`, `${fmtTokens(t.tokens)} tokens`);
     text(meta, parts.join(' · '));
   });
 
@@ -362,6 +363,7 @@ async function boot() {
     if (search) search.focus(); else router.go('fleet');
   }, 'global', 'Search');
   keys.bind('e', () => {
+    if (store.get().ui.route.view === 'escalations') { const b = main.querySelector('.view button'); if (b) b.focus(); return; }
     const btn = $('esc-bar').querySelector('button');
     if (btn) btn.focus(); else router.go('escalations');
   }, 'global', 'First escalation');
@@ -383,6 +385,10 @@ async function boot() {
       const skip = first && d && d.reset;
       first = false;
       if (!skip) sync.onDirty(d);
+    }, (up, r) => {
+      const c = store.get().conn;
+      if (!up) store.set({ conn: { state: 'down', error: (r && r.error) || 'no response', at: c.at } });
+      else first = false;    // the reset this reply carries reloads everything; markConn then flips conn to 'ok'
     }));
   }
   function stopData() {

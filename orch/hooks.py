@@ -130,7 +130,7 @@ class Hooks:
             env.update(SWITCHYARD_AGENT=_clean(aid), SWITCHYARD_STATUS=_clean(status), SWITCHYARD_EVENT=event,
                        SWITCHYARD_RESULT=_clean(result or "")[:MAX_RESULT])
             p = subprocess.Popen(split_command(h["run"]), shell=False, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=sys.platform != "win32")
             bufs = [bytearray(), bytearray()]
             readers = [threading.Thread(target=_drain, args=(pipe, buf), daemon=True) for pipe, buf in zip((p.stdout, p.stderr), bufs)]
             for t in readers:

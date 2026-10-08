@@ -186,3 +186,7 @@ claude mcp add switchyard -- python /path/to/switchyard/orch/mcp_bridge.py
 |---|---|
 | **Setup** | [install](docs/install.md) · [providers](docs/providers.md) · [policy](docs/policy.md) · [security](docs/security.md) |
 | **Use** | [mcp](docs/mcp.md) · [collaboration](docs/collaboration.md) · [AGENTS.md](AGENTS.md) · [skills](skills/README.md) |
+
+## License
+
+[MIT](LICENSE) © 2026 vassu-v.

@@ -93,14 +93,14 @@ describe('budgets and source hygiene', () => {
   };
   test('view files stay small; fleet JS fits its share of the budgets', () => {
     const files = ['js/views/fleet.js', 'js/components/fleet-model.js', 'js/components/fleet-rail.js',
-      'js/components/fleet-row.js', 'js/components/fleet-yard.js'];
+      'js/components/fleet-row.js', 'js/components/fleet-yard.js', 'js/components/fleet-lanes.js'];
     let sum = 0;
     for (const f of files) {
       const size = statSync(join(ui, f)).size;
       assert.ok(size <= 8192, `${f} is ${size}B (exceeds 8KB)`);
       sum += size;
     }
-    assert.ok(sum <= 32 * 1024, `fleet JS is ${sum}B (exceeds 32KB)`);
+    assert.ok(sum <= 36 * 1024, `fleet JS is ${sum}B (exceeds 36KB)`);
     const css = statSync(join(ui, 'css', 'fleet.css')).size;
     assert.ok(css <= 4096, `fleet.css is ${css}B`);
   });
@@ -169,6 +169,22 @@ describe('fleet-model', () => {
     assert.ok(apiYard.rows.every((r) => r.agent.status !== 'dead') || apiYard.deadCount === 1);
     assert.equal(apiYard.folded, false, '5-agent yard does not fold dead');
     assert.ok(apiYard.board.length <= 5);
+  });
+  test('questions: open only, newest first, cap 5, stale, ws-scoped', () => {
+    const q = (id, ws, extra) => ({ id, ws, kind: 'question', status: 'open', sender: 'agent:a' + id, text: 't' + id, ts: id, ...extra });
+    const posts = [...Array.from({ length: 7 }, (_, i) => q(i + 1, 'w-api')),
+      q(20, 'w-api', { status: 'answered' }), q(21, 'w-web'), q(22, 'w-api', { stale: true }),
+      { id: 23, ws: 'w-api', kind: 'done', sender: 'a', text: 'x', ts: 1 }];
+    const fx = fixture(10);
+    const snap = model.buildFleet({
+      agents: fx.list, workspaces: fx.workspaces, params: {}, now: 1790000000, escalations: [],
+      boards: { 'w-api': { posts, open_questions: 8 }, 'w-web': { posts: [], open_questions: 0 } },
+    });
+    const y = snap.yards.find((v) => v.id === 'w-api');
+    assert.deepEqual(y.qPosts.map((p) => p.id), [22, 7, 6, 5, 4]);
+    assert.equal(y.qPosts[0].stale, true);
+    assert.equal(y.questions, 8, 'count stays the board total');
+    assert.deepEqual(snap.yards.find((v) => v.id === 'w-web').qPosts.map((p) => p.id), [21], 'ws scoping by post.ws');
   });
   test('filters narrow rows; unknown workspace empties the fleet', () => {
     const fx = fixture(10);
@@ -272,8 +288,8 @@ describe('fleet render', () => {
     show(fixture(60), {}, {}, 'compact');
     const n60 = elements(host);
     assert.ok(n1 < n10 && n10 < n60, `scales with agents: ${n1}/${n10}/${n60}`);
-    assert.ok(n60 <= 1500, `60 agents use ${n60} element nodes (budget 1500)`);
-    assert.ok(n60 / 60 < 25, `per-row average ${(n60 / 60).toFixed(1)} under 25`);
+    assert.ok(n60 <= 1550, `60 agents use ${n60} element nodes (budget 1550)`);
+    assert.ok(n60 / 60 < 26, `per-row average ${(n60 / 60).toFixed(1)} under 26`);
   });
   test('one-row change touches only that row', () => {
     const fx = fixture(10);
@@ -352,6 +368,33 @@ describe('fleet render', () => {
       'dead rows re-appear after unfold');
     void store;
   });
+  test('questions lane: renders, patches in place, empty state, navigates', () => {
+    const now = Date.now() / 1000;
+    const fx = fixture(1);
+    const ws = fx.workspaces[0].id;
+    const mkq = (id, extra) => ({ id, ws, kind: 'question', status: 'open', sender: 'agent:bob', text: 'which port ' + id, ts: now - 60, ...extra });
+    const store = show(fx, {}, { boards: { [ws]: { posts: [mkq(1)], open_questions: 1 } } });
+    const lane = () => host.querySelector('.lane-q');
+    assert.equal(lane().querySelectorAll('.post').length, 1);
+    assert.ok(lane().textContent.includes('Questions') && lane().textContent.includes('1 open'));
+    assert.equal(lane().getAttribute('aria-label'), 'Questions');
+    assert.ok(host.querySelector('aside.board').querySelector('.lane-ann'), 'green lane kept');
+    assert.equal(lane().querySelector('.post').getAttribute('data-from'), 'bob', 'agent: stripped');
+    assert.ok(lane().querySelector('.none') === null);
+    const first = lane().querySelector('.post');
+    store.set({ boards: { [ws]: { posts: [mkq(1, { stale: true }), mkq(2)], open_questions: 2 } } });
+    store.flush();
+    assert.equal(lane().querySelectorAll('.post').length, 2);
+    assert.ok(lane().textContent.includes('2 open'));
+    assert.ok(lane().querySelectorAll('.stale').filter((e) => !e.hasAttribute('hidden')).length === 1);
+    assert.ok(lane().querySelector('[data-from]') === first || lane().querySelectorAll('.post').includes(first), 'post kept');
+    host.querySelector('.lk').dispatchEvent(new Event('click'));
+    assert.equal(globalThis.location.hash, `#/board/${ws}`);
+    store.set({ boards: { [ws]: { posts: [mkq(1, { status: 'answered' })], open_questions: 0 } } });
+    store.flush();
+    assert.equal(lane().querySelectorAll('.post').length, 0);
+    assert.ok(lane().textContent.includes('No open questions') && lane().textContent.includes('0 open'));
+  });
   test('badges, pips, provider chips and tool lines render', () => {
     const now = Date.now() / 1000;
     const mk = (id, extra) => ({
@@ -419,5 +462,16 @@ describe('fleet render', () => {
     }
     const per = (performance.now() - t0) / N;
     assert.ok(per < 8, `${per.toFixed(2)}ms per patch`);
+  });
+});
+
+describe('fleet empty states', () => {
+  test('no agents, no filters: first-run message without Clear filters; with a filter: Clear filters', () => {
+    show({ list: [], workspaces: [], providers: [] });
+    assert.match(host.textContent, /No agents yet\. Start one: python agentctl\.py spawn/);
+    assert.equal(host.querySelectorAll('button').filter((b) => b.textContent === 'Clear filters').length, 0);
+    show({ list: [], workspaces: [], providers: [] }, { q: 'zzz' });
+    assert.match(host.textContent, /No agents match these filters/);
+    assert.equal(host.querySelectorAll('button').filter((b) => b.textContent === 'Clear filters').length, 1);
   });
 });

@@ -7,6 +7,6 @@ export const spanSecs = (s) => SPAN_SECS[normSpan(s)];
 export const windowFor = (s, n) => ({ from: n - spanSecs(s), to: n });
 export function timelineUrl(ws, s, n) {
   const w = windowFor(s, n);
-  return '/api/timeline?' + (ws ? 'ws=' + encodeURIComponent(ws) : 'all=1') +
+  return '/api/timeline?' + (ws && ws !== 'all' ? 'ws=' + encodeURIComponent(ws) : 'all=1') +
     '&since=' + Math.floor(w.from) + '&until=' + Math.floor(w.to) + '&max=' + MAX_MARKS;
 }

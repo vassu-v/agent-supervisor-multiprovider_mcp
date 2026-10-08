@@ -148,11 +148,77 @@ class Output(unittest.TestCase):
         self.assertEqual((rc, err.count("\n")), (1, 1))
         self.assertIn("--run", err)
 
-    def test_06_hook_endpoint_missing_is_not_a_crash(self):
-        rc, out, err = self.c("hook", "w1", "--on", "done", "--run", "echo hi")      # the real server may not have it yet
-        self.assertIn(rc, (0, 1))
-        self.assertNotIn("Traceback", err)
-        self.assertTrue(rc == 0 or err.startswith("error:"), err)
+    def test_06_hook_against_the_real_server(self):
+        self.mk("hk1", [{"say": "x"}])
+        rc, out, err = self.c("hook", "hk1", "--on", "done", "--run", "echo hi")
+        self.assertEqual(rc, 0, err)
+        self.assertTrue(out.startswith("hook h"), out)
+        rc, out, err = self.c("hook", "no-such-agent", "--on", "done", "--run", "echo hi")
+        self.assertEqual(rc, 1)
+        self.assertEqual(err.count("\n"), 1, err)
+        self.assertTrue(err.startswith("error:") and "unknown agent" in err, err)
+
+    def test_07_json_token_is_a_message_after_double_dash(self):
+        self.mk("jt1", [{"say": "x"}])
+        wait_status(self.d, "jt1", "idle")
+        rc, out, err = self.c("send", "jt1", "--json")                 # no `--`: the token is the --json flag, so no message
+        self.assertEqual(rc, 1)
+        self.assertIn("missing", err)
+        rc, out, err = self.c("send", "jt1", "--json", "--", "--json")  # flag before `--`, literal message after
+        self.assertEqual(rc, 0, err)
+        self.assertIn("sent", out)
+        wait_status(self.d, "jt1", "idle", min_turns=2)
+        with open(os.path.join(self.tmp, "jt1", ".fake_inbox.jsonl"), encoding="utf-8") as f:
+            self.assertIn("--json", f.read())
+
+    def test_08_spawn_timeout_needs_wait(self):
+        rc, out, err = self.c("spawn", "x", "--provider", "fake", "--cwd", os.path.join(self.tmp, "nw"), "--timeout", "5")
+        self.assertEqual(rc, 1)
+        self.assertIn("--wait", err)
+
+
+class WaitUnit(unittest.TestCase):
+    """cmd_wait against canned /api/status replies (no daemon)."""
+
+    def run_wait(self, replies):
+        import contextlib
+        import io
+        import agentctl
+        seq = list(replies)
+        calls = []
+        old = agentctl.get, agentctl.time.sleep, agentctl.JSON_MODE
+        agentctl.get = lambda path: (calls.append(path), seq.pop(0) if len(seq) > 1 else seq[0])[1]
+        agentctl.time.sleep = lambda s: None
+        agentctl.JSON_MODE = False
+        out, err = io.StringIO(), io.StringIO()
+        try:
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                rc = agentctl.cmd_wait("a1", {})
+        finally:
+            agentctl.get, agentctl.time.sleep, agentctl.JSON_MODE = old
+        return rc, out.getvalue(), err.getvalue(), len(calls)
+
+    def info(self, st="idle", **turn):
+        return {"status": st, "turns": 1, "queued": 0, "turns_full": [dict(response="boom", **turn)]}
+
+    def test_failed_last_turn_exits_1(self):
+        rc, out, err, _ = self.run_wait([self.info(ok=False, stop="error")])
+        self.assertEqual(rc, 1)
+        self.assertIn("boom", out)
+        self.assertIn("failed", err)
+
+    def test_cancelled_or_ok_turn_exits_0(self):
+        self.assertEqual(self.run_wait([self.info(ok=False, stop="cancelled")])[0], 0)
+        self.assertEqual(self.run_wait([self.info(ok=True, stop="end")])[0], 0)
+
+    def test_idle_must_hold_for_two_polls(self):
+        busy = {"status": "busy", "turns": 2, "queued": 0, "turns_full": [{"response": "x", "ok": True}, {"partial": "..."}]}
+        rc, out, _, n = self.run_wait([self.info(ok=True), busy, self.info(ok=True), self.info(ok=True)])
+        self.assertEqual((rc, n), (0, 4))                      # the blip to idle before the follow-up turn started is not enough
+
+    def test_failed_states_are_immediate(self):
+        rc, _, err, n = self.run_wait([{"status": "dead", "turns": 1, "queued": 0, "turns_full": [{"response": "x"}]}])
+        self.assertEqual((rc, n), (1, 1))
 
 
 class ResultText(unittest.TestCase):
@@ -181,7 +247,7 @@ class Stub(http.server.BaseHTTPRequestHandler):
         if self.path == "/api/hook":
             self._reply({"hook": "h7", "id": body["id"], "on": body["on"], "run": body["run"], "repeat": body["repeat"]})
         elif self.path == "/api/unhook":
-            self._reply({"result": "removed"})
+            self._reply({"ok": True})
         else:
             self._reply({"error": "no such endpoint"})
 

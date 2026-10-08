@@ -3,6 +3,7 @@ Run: py -3.10 tests/test_hooks.py"""
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -47,10 +48,42 @@ class Unit(unittest.TestCase):
         self.assertEqual(a["exit"], 0)
         self.assertEqual(a["output"].count("x"), hm.MAX_OUT)
 
+    @staticmethod
+    def pid_alive(pid):
+        if sys.platform == "win32":                    # os.kill(pid, 0) would terminate the process on Windows
+            r = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True, text=True)
+            return str(pid) in r.stdout
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        try:                                           # a killed-but-unreaped orphan is a zombie until init collects it
+            return open(f"/proc/{pid}/stat").read().rsplit(")", 1)[1].split()[0] != "Z"
+        except OSError:
+            return True
+
     def test_timeout_kills_child(self):
-        a = self.run_hook("import time;print('hi',flush=True);time.sleep(60)", timeout=1)
+        pidfile = os.path.join(tempfile.mkdtemp(prefix="sy-hookpid-"), "pids")
+        os.environ["SY_PIDFILE"] = pidfile
+        try:
+            a = self.run_hook("import os,subprocess,sys,time;"
+                              "g=subprocess.Popen([sys.executable,'-c','import time;time.sleep(60)']);"
+                              "open(os.environ['SY_PIDFILE'],'w').write('%d %d'%(os.getpid(),g.pid));"
+                              "print('hi',flush=True);time.sleep(60)", timeout=3)
+        finally:
+            del os.environ["SY_PIDFILE"]
         self.assertEqual(a["exit"], "timeout")
         self.assertIn("hi", a["output"])
+        with open(pidfile) as f:
+            child, grandchild = map(int, f.read().split())
+        end = time.time() + 5
+        while time.time() < end and (self.pid_alive(child) or self.pid_alive(grandchild)):
+            time.sleep(0.1)
+        self.assertFalse(self.pid_alive(child), "hook child survived the timeout")
+        self.assertFalse(self.pid_alive(grandchild), "hook grandchild survived the timeout")
+        shutil.rmtree(os.path.dirname(pidfile), ignore_errors=True)
 
     def test_error_hook_fires_with_queued_work(self):
         import threading
@@ -151,7 +184,8 @@ class Hooks(unittest.TestCase):
         st, r = self.hook(aid, "error", self.pycmd(WRITE_ENV, out))
         self.assertEqual(st, 200, r)
         rows = self.wait(lambda: read_lines(out))
-        self.assertIn(rows[0]["SWITCHYARD_EVENT"], ("error", "dead"))
+        self.assertEqual(rows[0]["SWITCHYARD_EVENT"], "error")      # the failed turn's result precedes the death; the one-shot hook is spent on it
+        self.assertEqual(len(rows), 1)
 
     def test_done_on_stop(self):
         aid, cwd = self.agent([{"say": "x"}])

@@ -1,5 +1,6 @@
 """CLI client for the orchestrator.  python agentctl.py <cmd> ...      (Windows: `py -3` also works)
-Output is short and readable by default; add --json (anywhere on the line) for the full raw JSON.
+Output is short and readable by default; add --json (anywhere before a bare `--`) for the full raw JSON.
+A bare `--` ends the flags: everything after it is taken literally, e.g.  send a1 -- "--json"
   serve                                   start the daemon (run as a background task)
   spawn "<task>" --cwd DIR [--provider agy|claude|codex|opencode|auto] [--model M] [--tier T] [--effort low|medium|high|xhigh|max] [--id ID] [--sandbox]
   list | status ID | tail ID [N] | result ID | events ID [SINCE]
@@ -20,11 +21,11 @@ Output is short and readable by default; add --json (anywhere on the line) for t
   wait ID [--timeout SECONDS] [--until idle|done]     block until the agent has finished its work (idle, every turn answered, nothing queued; --until
                                                       idle and done are the same), then print its result;
                                                       exit 0 finished, 1 error/stopped/dead, 2 timeout.  spawn ... --wait = spawn, then wait
-  spawn ... --cwd DIR                                 DIR is created if missing (default: the current directory); spawn ... --wait [--timeout S]
+  spawn ... --cwd DIR                                 DIR is created if its parent exists (default: the current directory); spawn ... --wait [--timeout S]
   hook ID --on done|idle|error|any --run "<cmd>" [--repeat]   run a shell command when the agent reaches that state (once, unless --repeat)
   hooks                                               list hooks            unhook HOOKID     remove one
   --json                                              any command: print the raw JSON reply instead of the readable summary
-Env: ORCH_URL (default http://127.0.0.1:8765), ORCH_TOKEN (default: orch/token.txt), ORCH_AGENT (caller id for audit),
+Env: ORCH_URL (default http://127.0.0.1:$ORCH_PORT, port 8765), ORCH_TOKEN (default: orch/token.txt), ORCH_AGENT (caller id for audit),
      ORCH_WORKSPACE (default --ws; else the workspace of the current directory), SWITCHYARD_SESSION (session id header)."""
 import difflib
 import json
@@ -37,7 +38,7 @@ import urllib.parse
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-URL = os.environ.get("ORCH_URL", "http://127.0.0.1:8765")
+URL = os.environ.get("ORCH_URL") or "http://127.0.0.1:" + os.environ.get("ORCH_PORT", "8765")     # ORCH_PORT moves both serve and the client
 
 
 def token():
@@ -329,19 +330,23 @@ def cmd_wait(aid, kw):
         except (TypeError, ValueError):
             raise CliError(f"--timeout needs a number of seconds (got {timeout!r})")
     deadline = None if timeout is None else time.time() + timeout
+    calm = 0                                    # consecutive polls on which the agent looked settled
     while True:
         info = chk(get("/api/status?id=" + urllib.parse.quote(str(aid))))
         st = info.get("status") or info.get("state")
         settled = (info.get("turns", 0) >= 1 and not info.get("queued") and all("response" in t for t in info.get("turns_full") or [])
                    if isinstance(info.get("turns"), int) else True)    # an adapter reports a start-time 'idle' before its first turn
-        if st in FAILED or (st == "idle" and settled):      # idle and done both mean: every turn answered, nothing queued
+        calm = calm + 1 if st == "idle" and settled else 0   # idle and done both mean: every turn answered, nothing queued
+        if st in FAILED or calm >= 2:                       # twice in a row: the daemon sets idle a few ms before it delivers/queues follow-ups
             break
         if deadline is not None and time.time() >= deadline:
             if JSON_MODE:
                 print(json.dumps(info, indent=1))
             print(f"error: timed out after {timeout:g}s waiting for {aid} (status {st})", file=sys.stderr)
             return 2
-        time.sleep(1)
+        time.sleep(0.4 if calm else 1)
+    last = (info.get("turns_full") or [{}])[-1]
+    turn_failed = last.get("ok") is False and last.get("stop") != "cancelled"      # the agent is idle again after a failed turn
     if JSON_MODE:
         print(json.dumps(info, indent=1))
     else:
@@ -350,7 +355,9 @@ def cmd_wait(aid, kw):
             print(text)
         if st in FAILED:
             print(f"error: {aid} ended: {st}" + (f" ({clean(info['stopped_by'])})" if info.get("stopped_by") else ""), file=sys.stderr)
-    return 1 if st in FAILED else 0
+        elif turn_failed:
+            print(f"error: {aid}'s last turn failed", file=sys.stderr)
+    return 1 if st in FAILED or turn_failed else 0
 
 
 def run(cmd, pos, kw):
@@ -485,8 +492,10 @@ def run(cmd, pos, kw):
 def main():
     global JSON_MODE
     argv = sys.argv[1:]
-    JSON_MODE = "--json" in argv
-    argv = [a for a in argv if a != "--json"]
+    cut = argv.index("--") if "--" in argv else len(argv)
+    head, tail = argv[:cut], argv[cut + 1:]
+    JSON_MODE = "--json" in head
+    argv = [a for a in head if a != "--json"]
     try:
         sys.stdout.reconfigure(errors="replace")       # a non-UTF-8 console must never crash the printing
     except (AttributeError, ValueError):
@@ -495,6 +504,7 @@ def main():
         print(__doc__)
         return
     cmd, (pos, kw) = argv[0], flags(argv[1:])
+    pos += tail                                    # after a bare `--` every token is positional, even "--json"
     if cmd not in COMMANDS:
         near = difflib.get_close_matches(cmd, COMMANDS, n=1)
         print(f"unknown command {cmd!r}" + (f" - did you mean '{near[0]}'?" if near else ""), file=sys.stderr)
@@ -518,6 +528,8 @@ def main():
             need(pos, 1, "wait ID [--timeout SECONDS] [--until idle|done]")
             sys.exit(cmd_wait(pos[0], kw))
         wait = cmd == "spawn" and kw.get("wait")
+        if cmd == "spawn" and not wait and ("timeout" in kw or "until" in kw):
+            raise CliError("--timeout/--until only apply together with --wait")
         wkw = {k: kw[k] for k in ("timeout", "until") if k in kw}
         out = run(cmd, pos, kw)
         chk(out)
