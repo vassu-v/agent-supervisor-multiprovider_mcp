@@ -21,6 +21,8 @@ import threading
 import time
 import uuid
 
+from orch.base import kill_tree
+
 ON = ("done", "idle", "error", "any")
 MATCH = {"idle": {"idle"}, "done": {"idle", "stopped", "dead"}, "error": {"error", "dead"},
          "any": {"idle", "stopped", "dead", "error"}}
@@ -41,6 +43,24 @@ def split_command(run):
     if not parts:
         raise ValueError("run must contain a command")
     return parts
+
+
+def _drain(pipe, buf):
+    """Read a child pipe to EOF, keeping at most MAX_OUT bytes and discarding the rest (memory stays bounded while it runs)."""
+    try:
+        while True:
+            chunk = pipe.read(8192)
+            if not chunk:
+                break
+            if len(buf) < MAX_OUT:
+                buf += chunk[:MAX_OUT - len(buf)]
+    except (OSError, ValueError):
+        pass
+    finally:
+        try:
+            pipe.close()
+        except OSError:
+            pass
 
 
 def _clean(s):
@@ -109,12 +129,21 @@ class Hooks:
             env = dict(os.environ)
             env.update(SWITCHYARD_AGENT=_clean(aid), SWITCHYARD_STATUS=_clean(status), SWITCHYARD_EVENT=event,
                        SWITCHYARD_RESULT=_clean(result or "")[:MAX_RESULT])
-            p = subprocess.run(split_command(h["run"]), shell=False, cwd=cwd, env=env, capture_output=True,
-                               timeout=TIMEOUT, stdin=subprocess.DEVNULL)
-            code = p.returncode
-            out = (p.stdout or b"").decode("utf-8", "replace") + (p.stderr or b"").decode("utf-8", "replace")
-        except subprocess.TimeoutExpired as e:
-            code, out = "timeout", ((e.stdout or b"").decode("utf-8", "replace") if isinstance(e.stdout, bytes) else "")
+            p = subprocess.Popen(split_command(h["run"]), shell=False, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            bufs = [bytearray(), bytearray()]
+            readers = [threading.Thread(target=_drain, args=(pipe, buf), daemon=True) for pipe, buf in zip((p.stdout, p.stderr), bufs)]
+            for t in readers:
+                t.start()
+            try:
+                code = p.wait(timeout=TIMEOUT)
+            except subprocess.TimeoutExpired:
+                kill_tree(p)
+                p.wait()
+                code = "timeout"
+            for t in readers:
+                t.join(5)                              # a grandchild holding the pipe open must not hang the hook
+            out = "".join(bytes(b).decode("utf-8", "replace") for b in bufs)
         except Exception as e:
             code, out = "error", repr(e)
         with self.lock:

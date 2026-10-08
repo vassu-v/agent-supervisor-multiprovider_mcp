@@ -74,7 +74,7 @@ started a1 on agy:gemini-3.8-flash-high (tier standard) in ../switchyard-demo
 
 | You want | Command |
 |---|---|
-| Block until the agent is idle, then print its reply | `wait <id>` (exit code 0 ok, 1 failed, 2 timeout) |
+| Block until the agent is idle, then print its reply | `wait <id>` (exit code 0 ok, 1 failed, 2 timeout; `--until done` is the same as the default `idle`) |
 | Spawn and block in one step | `spawn "..." --wait` |
 | Run a command when an agent finishes | `hook <id> --on done --run "python notify.py"` |
 | See or remove hooks | `hooks` · `unhook <hook-id>` |

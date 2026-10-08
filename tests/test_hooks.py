@@ -23,6 +23,52 @@ def read_lines(p):
         return [json.loads(x) for x in f if x.strip()]
 
 
+class Unit(unittest.TestCase):
+    """Hooks._run and Orchestrator._on_result without a daemon."""
+
+    def run_hook(self, code, timeout=None):
+        from types import SimpleNamespace
+        from orch import hooks as hm
+        audits = []
+        h = hm.Hooks(SimpleNamespace(agents={}, _audit=lambda kind, **kw: audits.append((kind, kw))))
+        cmd = f'"{sys.executable}" -c "{code}"'
+        old = hm.TIMEOUT
+        if timeout:
+            hm.TIMEOUT = timeout
+        try:
+            h._run({"hook": "h1", "run": cmd}, "a1", os.getcwd(), "idle", "idle", "")
+        finally:
+            hm.TIMEOUT = old
+        return audits[-1][1]
+
+    def test_output_is_bounded_while_running(self):
+        from orch import hooks as hm
+        a = self.run_hook("import sys;sys.stdout.write('x'*3000000);sys.stderr.write('e'*3000000)")
+        self.assertEqual(a["exit"], 0)
+        self.assertEqual(a["output"].count("x"), hm.MAX_OUT)
+
+    def test_timeout_kills_child(self):
+        a = self.run_hook("import time;print('hi',flush=True);time.sleep(60)", timeout=1)
+        self.assertEqual(a["exit"], "timeout")
+        self.assertIn("hi", a["output"])
+
+    def test_error_hook_fires_with_queued_work(self):
+        import threading
+        from types import SimpleNamespace
+        from orch.core import Orchestrator
+        fired = []
+        rec = SimpleNamespace(id="a1", lock=threading.RLock(), turns=[{"t0": time.time()}], queue=["more"], status="busy",
+                              parent=None, open_tools=[])
+        me = SimpleNamespace(_check_forbidden=lambda r: None, lock=threading.RLock(), _pending_wake={},
+                             _deliver_quiet=lambda r, m: None, hooks=SimpleNamespace(fire=lambda r, e, t="": fired.append(e)))
+        Orchestrator._on_result(me, rec, {"ok": False, "text": "boom"})
+        self.assertEqual(fired, ["error"])
+        rec.turns, rec.queue, rec.status = [{"t0": time.time()}], [], "busy"
+        fired.clear()
+        Orchestrator._on_result(me, rec, {"ok": True, "text": "fine"})
+        self.assertEqual(fired, ["idle"])
+
+
 class Hooks(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

@@ -97,6 +97,8 @@ class Output(unittest.TestCase):
         self.assertEqual((rc, out.strip()), (0, "slow answer"), err)
         rc, out, _ = self.c("wait", "wt1", "--json")
         self.assertEqual(json.loads(out)["status"], "idle")
+        rc, out, err = self.c("wait", "wt1", "--until", "done")
+        self.assertEqual((rc, out.strip()), (0, "slow answer"), err)
         self.mk("wt2", [{"sleep": 30}])
         rc, out, err = self.c("wait", "wt2", "--timeout", "1")
         self.assertEqual(rc, 2, err)
@@ -153,6 +155,16 @@ class Output(unittest.TestCase):
         self.assertTrue(rc == 0 or err.startswith("error:"), err)
 
 
+class ResultText(unittest.TestCase):
+    def test_newest_turn_only(self):
+        import agentctl
+        rt = agentctl.result_text
+        self.assertEqual(rt({"turns_full": [{"response": "old"}, {"response": ""}]}), "")
+        self.assertEqual(rt({"turns_full": [{"response": "old"}, {"partial": "new so far"}]}), "new so far")
+        self.assertEqual(rt({"turns_full": [{"response": "a"}, {"response": "b"}]}), "b")
+        self.assertEqual(rt({"turns": []}), "")
+
+
 class Stub(http.server.BaseHTTPRequestHandler):
     seen = []
 
@@ -175,7 +187,7 @@ class Stub(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         Stub.seen.append((self.path, None))
-        self._reply([{"id": "h7", "agent": "a1", "on": "done", "run": "echo hi", "repeat": False}] if self.path == "/api/hooks"
+        self._reply([{"hook": "h7", "id": "a1", "on": "done", "run": "echo hi", "repeat": False}] if self.path == "/api/hooks"
                     else {"error": "nope"})
 
     def log_message(self, *a):
@@ -206,11 +218,11 @@ class HookClient(unittest.TestCase):
         self.assertEqual((body["id"], body["on"], body["run"], body["repeat"]), ("a1", "done", "echo hi", True))
         rc, out, _ = self.c("hooks")
         self.assertEqual(rc, 0)
-        self.assertIn("h7", out)
+        self.assertTrue(out.startswith("h7  a1  on done"), out)       # hook id first (what unhook takes), then the agent
         self.assertIn("echo hi", out)
         self.assertNotIn("{", out)
         rc, out, _ = self.c("hooks", "--json")
-        self.assertEqual(json.loads(out)[0]["id"], "h7")
+        self.assertEqual(json.loads(out)[0]["hook"], "h7")
         rc, out, _ = self.c("unhook", "h7")
         self.assertEqual((rc, out.strip()), (0, "removed hook h7"))
         self.assertEqual(Stub.seen[-1][0], "/api/unhook")

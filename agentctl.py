@@ -17,8 +17,9 @@ Output is short and readable by default; add --json (anywhere on the line) for t
   sessions                                            attached clients
   dashboard [--no-open]                               print (and open in the browser) http://127.0.0.1:PORT/ui/#t=TOKEN
   list [--ws ID] [--all] [--tree]                     agents as a table (default: everything; --tree indents children under parents)
-  wait ID [--timeout SECONDS] [--until idle|done]     block until the agent is idle (or finished, with --until done), then print its result;
-                                                      exit 0 idle/done, 1 error/stopped/dead, 2 timeout.  spawn ... --wait = spawn, then wait
+  wait ID [--timeout SECONDS] [--until idle|done]     block until the agent has finished its work (idle, every turn answered, nothing queued; --until
+                                                      idle and done are the same), then print its result;
+                                                      exit 0 finished, 1 error/stopped/dead, 2 timeout.  spawn ... --wait = spawn, then wait
   spawn ... --cwd DIR                                 DIR is created if missing (default: the current directory); spawn ... --wait [--timeout S]
   hook ID --on done|idle|error|any --run "<cmd>" [--repeat]   run a shell command when the agent reaches that state (once, unless --repeat)
   hooks                                               list hooks            unhook HOOKID     remove one
@@ -160,17 +161,6 @@ def fmt_board(b):
     return "\n".join(lines)
 
 
-def fmt_list(rows, tree):
-    if not isinstance(rows, list):
-        return json.dumps(rows, indent=1)
-    out = []
-    for a in rows:
-        pad = "  " * int(a.get("depth", 0)) if tree else ""
-        out.append(f"{pad}{a.get('id')}  {a.get('provider')}  {a.get('status')}" + (f"  parent={a['parent']}" if a.get("parent") else "")
-                   + (f"  goal: {a['goal']}" if a.get("goal") else ""))
-    return "\n".join(out) or "(no agents)"
-
-
 JSON_MODE = False
 HOOK_ON = ("done", "idle", "error", "any")
 COMMANDS = ("serve", "spawn", "list", "status", "tail", "result", "events", "send", "interrupt", "stop", "escalations", "resolve", "audit",
@@ -249,12 +239,10 @@ def h_status(a, pos, kw):
 
 def result_text(out):
     turns = [t for t in (out.get("turns_full") or out.get("turns") or []) if isinstance(t, dict)]
-    for t in reversed(turns):
-        if t.get("response"):
-            return t["response"]
-    if turns and turns[-1].get("partial"):
-        return turns[-1]["partial"]
-    return ""
+    if not turns:
+        return ""
+    t = turns[-1]                                      # only the newest turn: never show an older turn's text as its answer
+    return t.get("response") or t.get("partial") or ""
 
 
 def h_result(out, pos, kw):
@@ -294,14 +282,11 @@ def h_stop(out, pos, kw):
 
 
 def hook_line(h):
-    who = h.get("agent", h.get("target", h.get("agent_id", "")))
-    return clean(f"{h.get('id', h.get('hook', '?'))}  {who}  on {h.get('on', '?')}  {'every time' if h.get('repeat') else 'once'}  run: {h.get('run', '')}")
+    return clean(f"{h.get('hook', '?')}  {h.get('id', '')}  on {h.get('on', '?')}  {'every time' if h.get('repeat') else 'once'}  run: {h.get('run', '')}")
 
 
 def h_hook(out, pos, kw):
-    h = out.get("hook", out.get("id", "?"))
-    hid = h.get("id", "?") if isinstance(h, dict) else h
-    return f"hook {hid}: when {pos[0]} reaches {kw['on']}, run: {clean(kw['run'], 100)} ({'every time' if kw.get('repeat') else 'once'})"
+    return f"hook {out.get('hook', '?')}: when {pos[0]} reaches {kw['on']}, run: {clean(kw['run'], 100)} ({'every time' if kw.get('repeat') else 'once'})"
 
 
 def h_hooks(out, pos, kw):
@@ -324,8 +309,6 @@ def render(cmd, out, pos, kw):
     """The text to print for `out`: readable by default, raw JSON with --json or when a summary does not fit the reply."""
     if isinstance(out, str):
         return out
-    if cmd == "list" and kw.get("tree") and JSON_MODE:
-        return fmt_list(out, True)                      # --json keeps the old output of --tree byte for byte
     if not JSON_MODE and cmd in HUMAN:
         try:
             return HUMAN[cmd](out, pos, kw)
@@ -351,7 +334,7 @@ def cmd_wait(aid, kw):
         st = info.get("status") or info.get("state")
         settled = (info.get("turns", 0) >= 1 and not info.get("queued") and all("response" in t for t in info.get("turns_full") or [])
                    if isinstance(info.get("turns"), int) else True)    # an adapter reports a start-time 'idle' before its first turn
-        if st in FAILED or (until == "idle" and st == "idle" and settled):
+        if st in FAILED or (st == "idle" and settled):      # idle and done both mean: every turn answered, nothing queued
             break
         if deadline is not None and time.time() >= deadline:
             if JSON_MODE:

@@ -165,10 +165,10 @@ class CliMcp(unittest.TestCase):
         self.ok("declare", "--goal", "new goal", "--paths", "a/**", "--id", "parent1")
         info = api(self.d, "GET", "/api/status?id=parent1")[1]
         self.assertEqual((info["goal"], info["paths"]), ("new goal", ["a/**"]))
-        tree = self.ok("list", "--tree", "--json", "--ws", self.ws).splitlines()       # --json keeps the old text of --tree
-        i_p = next(i for i, l in enumerate(tree) if l.startswith("parent1"))
-        self.assertTrue(tree[i_p + 1].startswith("  child1"), tree)
-        self.assertIn("goal: do the child thing", tree[i_p + 1])
+        rows = json.loads(self.ok("list", "--tree", "--json", "--ws", self.ws))       # --json is real JSON, with depth
+        ids = [r["id"] for r in rows]
+        self.assertEqual(rows[ids.index("child1")]["depth"], rows[ids.index("parent1")]["depth"] + 1)
+        self.assertEqual(ids.index("child1"), ids.index("parent1") + 1)
         htree = self.ok("list", "--tree", "--ws", self.ws).splitlines()                # the readable table indents the id too
         i_p = next(i for i, l in enumerate(htree) if l.startswith("parent1"))
         self.assertTrue(htree[i_p + 1].startswith("  child1"), htree)
