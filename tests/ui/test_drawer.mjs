@@ -215,6 +215,46 @@ describe('drawer view', () => {
     assert.equal(api.calls.get.filter((p) => p.startsWith('/api/status')).length, 2, 'turn change refetches');
   });
 
+  test('a turn finishing (same turn count, busy -> idle) refetches the turns', async () => {
+    const api = fakeApi({ get: (p) => (p.startsWith('/api/status') ? { turns_full: [{ t0: 1, response: 'r', ok: true }] } : []) });
+    const { store } = mounted([agent({ turns: 2, status: 'busy' })], 'a1', api);
+    await tick();
+    const n = () => api.calls.get.filter((p) => p.startsWith('/api/status')).length;
+    assert.equal(n(), 1);
+    store.set(stateFor([agent({ turns: 2, status: 'idle' })], 'a1'));
+    store.flush();
+    await tick();
+    assert.equal(n(), 2, 'status change at the same turn count refetches');
+  });
+
+  test('status polls: one in flight per agent, and a late reply for a previous agent is dropped', async () => {
+    const held = [];
+    const api = fakeApi({ get: (p) => (p.startsWith('/api/status')
+      ? new Promise((res) => held.push([p, res])) : []) });
+    const { store, el } = mounted([agent({ turns: 2 }), agent({ id: 'a2', turns: 2 })], 'a1', api);
+    await tick();
+    const n = () => api.calls.get.filter((p) => p.startsWith('/api/status')).length;
+    assert.equal(n(), 1);
+    store.set(stateFor([agent({ turns: 3 }), agent({ id: 'a2', turns: 2 })], 'a1'));   // turn change while the first poll is out
+    store.flush();
+    await tick();
+    assert.equal(n(), 1, 'no overlapping poll for the same agent');
+    held[0][1]({ turns_full: [{ t0: 1, response: 'one', ok: true }] });
+    await tick();
+    assert.equal(n(), 2, 'the skipped poll re-runs once the first lands');
+    store.set(stateFor([agent(), agent({ id: 'a2', turns: 2 })], 'a2'));               // switch away with a poll still out
+    store.flush();
+    await tick();
+    assert.equal(n(), 3);
+    held[2][1]({ turns_full: [{ t0: 9, response: 'from a2', ok: true }] });
+    await tick();
+    held[1][1]({ turns_full: [{ t0: 1, response: 'STALE a1', ok: true }, { t0: 2, response: 'STALE', ok: true }] });
+    await tick();
+    const txt = el.querySelector('.dw-turns').textContent;
+    assert.match(txt, /turn 1/);
+    assert.doesNotMatch(txt, /turn 2/, 'older a1 reply must not overwrite a2');
+  });
+
   test('switching agents resets the stream and refetches with since=0', async () => {
     const api = fakeApi({ get: (p) => (p.startsWith('/api/status') ? { turns_full: [] } : [ev(1), ev(2)]) });
     const { store, el } = mounted([agent(), agent({ id: 'a2', goal: 'other' })], 'a1', api);

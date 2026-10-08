@@ -116,6 +116,8 @@ describe('spans', () => {
     const all = timelineUrl('', '15m', now);
     assert.match(a, /ws=w1/);
     assert.match(all, /all=1/);
+    assert.match(timelineUrl('all', '15m', now), /all=1/);
+    assert.doesNotMatch(timelineUrl('all', '15m', now), /ws=/);
     assert.match(a, /max=2000/);
     const since = (u) => Number(/since=(\d+)/.exec(u)[1]);
     assert.equal(since(b) - since(a), 900 - 3600, '1h looks further back');

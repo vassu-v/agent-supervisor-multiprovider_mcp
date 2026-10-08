@@ -42,10 +42,19 @@ $ python agentctl.py stop <id> --reason "wrong environment"
 git clone https://github.com/vassu-v/agent-supervisor-multiprovider_mcp switchyard && cd switchyard
 python agentctl.py serve        # leave running
 python agentctl.py dashboard    # opens the dashboard in your browser
-python agentctl.py spawn "write primes.py, run it, reply with the output" --cwd ./demo --provider auto
+python agentctl.py spawn "write primes.py, run it, reply with the output" --cwd ../switchyard-demo --provider auto
 ```
 
 > `python agentctl.py providers` shows what is ready, off, not installed or needs a login.
+
+```console
+$ python agentctl.py spawn "write primes.py" --cwd ../switchyard-demo --wait     # blocks, then prints the agent's reply
+started a1 on agy:gemini-3.8-flash-high (tier standard) in ../switchyard-demo
+...
+```
+
+> **What Switchyard writes into your project.** One folder, `.switchyard/`, in the agent's working directory. It holds `AGENTS.md`, the shared notes every agent reads and appends to under `## Agent notes`, plus a `.gitignore` so it never shows up in `git status`. Your own `AGENTS.md`, `CLAUDE.md` and other files are never touched. Logs live in `logs/` inside the Switchyard folder, not in your project.
+> Add `--json` to any command for the full machine-readable output.
 
 **Next →** [change course while an agent works](#steer-without-restarting)
 
@@ -60,6 +69,17 @@ python agentctl.py spawn "write primes.py, run it, reply with the output" --cwd 
 | Adjust mid-turn | `send <id> "..." --mode steer` |
 | Change direction now | `send <id> "..." --mode interrupt` |
 | Cancel, send nothing | `interrupt <id>` |
+
+**Wait for an agent, or hook it.** Scripts and other agents do not have to poll.
+
+| You want | Command |
+|---|---|
+| Block until the agent is idle, then print its reply | `wait <id>` (exit code 0 ok, 1 failed, 2 timeout; `--until done` is the same as the default `idle`) |
+| Spawn and block in one step | `spawn "..." --wait` |
+| Run a command when an agent finishes | `hook <id> --on done --run "python notify.py"` |
+| See or remove hooks | `hooks` · `unhook <hook-id>` |
+
+> Hooks run without a shell, once by default (add `--repeat`), and only you can set them, not agents. The command gets `SWITCHYARD_AGENT`, `SWITCHYARD_STATUS`, `SWITCHYARD_EVENT` and `SWITCHYARD_RESULT` in its environment. A daemon restart clears them.
 
 **Next →** [risky commands](#let-risky-commands-wait-for-you) · per-provider detail: [docs/providers.md](docs/providers.md)
 
@@ -144,6 +164,8 @@ claude mcp add switchyard -- python /path/to/switchyard/orch/mcp_bridge.py
 |---|---|
 | The guard reacts after a tool call starts and cannot undo it | Use a container or VM for real isolation |
 | The daemon binds to `127.0.0.1`; agents run with full permissions and can read the admin token | Never expose the port |
+| Closing the `serve` terminal ends every agent (they die with the daemon) | Run it in a terminal you keep open |
+| Every provider adds its own base context (system prompt, tool definitions) to each turn, and Switchyard adds about 1,700 characters of rules on top. Small tasks can still use tens of thousands of tokens, mostly the provider's own | Judge cost from your provider's usage, not task size |
 | Cheaper models make more mistakes | Verify their output |
 | Tested on Windows 11 only; Codex never ran against a real Codex | Treat Linux, macOS and Codex as unverified |
 
@@ -154,7 +176,7 @@ claude mcp add switchyard -- python /path/to/switchyard/orch/mcp_bridge.py
 
 - Advisory file claims with expiring leases
 - Edit history per agent, with diffs
-- Notes in SQLite, rendered to `AGENTS.md`
+- Notes in SQLite, rendered to `.switchyard/AGENTS.md`
 - Hook enforcement and opt-in worktrees
 </details>
 
@@ -164,4 +186,7 @@ claude mcp add switchyard -- python /path/to/switchyard/orch/mcp_bridge.py
 |---|---|
 | **Setup** | [install](docs/install.md) · [providers](docs/providers.md) · [policy](docs/policy.md) · [security](docs/security.md) |
 | **Use** | [mcp](docs/mcp.md) · [collaboration](docs/collaboration.md) · [AGENTS.md](AGENTS.md) · [skills](skills/README.md) |
-| **Design** | [PLAN](docs/PLAN.md) · [ROADMAP](docs/ROADMAP.md) |
+
+## License
+
+[MIT](LICENSE) © 2026 vassu-v.

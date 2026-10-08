@@ -85,6 +85,7 @@ export function mount(el, store, api) {
     if (!id) {
       empty.hidden = false;
       text(title, 'Board');
+      title.removeAttribute('title');
       wrap.hidden = true;
       act.hidden = true;
       forms.hidden = true;
@@ -99,7 +100,9 @@ export function mount(el, store, api) {
     ctx.agents = s.agents || [];
     ctx.byId = new Map((board.posts || []).map((p) => [Number(p.id), p]));
     const parts = splitPosts(board.posts || []);
-    text(title, 'Board · ' + id);
+    const w = (s.workspaces || []).find((x) => x.id === id);
+    text(title, 'Board · ' + ((w && w.name) || id));
+    title.setAttribute('title', id);
     text(annCount, String(parts.ann.length));
     const openN = parts.questions.filter(isOpen).length;
     text(qCount, openN ? openN + ' open' : '0 open');
@@ -121,6 +124,7 @@ export function mount(el, store, api) {
 
   st.unsubs.push(store.subscribe((s) => s.boards, render));
   st.unsubs.push(store.subscribe((s) => s.agents, render));
+  st.unsubs.push(store.subscribe((s) => s.workspaces, render));
   st.unsubs.push(store.subscribe((s) => s.ui.route, render));
   st.popScope = pushScope('board');
   st.unbinds.push(bind('j', () => step(1), 'board', 'Next post'));

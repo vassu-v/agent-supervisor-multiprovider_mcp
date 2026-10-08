@@ -154,7 +154,7 @@ class CliMcp(unittest.TestCase):
         st, r = spawn_fake(self.d, [{"say": "hi"}], os.path.join(self.repo, "p"), id="parent1")
         self.assertEqual(st, 200, r)
         out = self.ok("spawn", json.dumps([{"say": "child"}]), "--provider", "fake", "--cwd", os.path.join(self.repo, "c"),
-                      "--id", "child1", "--goal", "do the child thing", "--paths", "src/x.py,docs/", "--parent", "parent1")
+                      "--id", "child1", "--goal", "do the child thing", "--paths", "src/x.py,docs/", "--parent", "parent1", "--json")
         self.assertEqual(json.loads(out)["id"], "child1")
         wait_status(self.d, "parent1", "idle")
         wait_status(self.d, "child1", "idle")
@@ -165,13 +165,17 @@ class CliMcp(unittest.TestCase):
         self.ok("declare", "--goal", "new goal", "--paths", "a/**", "--id", "parent1")
         info = api(self.d, "GET", "/api/status?id=parent1")[1]
         self.assertEqual((info["goal"], info["paths"]), ("new goal", ["a/**"]))
-        tree = self.ok("list", "--tree", "--ws", self.ws).splitlines()
-        i_p = next(i for i, l in enumerate(tree) if l.startswith("parent1"))
-        self.assertTrue(tree[i_p + 1].startswith("  child1"), tree)
-        self.assertIn("goal: do the child thing", tree[i_p + 1])
-        plain = json.loads(self.ok("list", "--all"))
+        rows = json.loads(self.ok("list", "--tree", "--json", "--ws", self.ws))       # --json is real JSON, with depth
+        ids = [r["id"] for r in rows]
+        self.assertEqual(rows[ids.index("child1")]["depth"], rows[ids.index("parent1")]["depth"] + 1)
+        self.assertEqual(ids.index("child1"), ids.index("parent1") + 1)
+        htree = self.ok("list", "--tree", "--ws", self.ws).splitlines()                # the readable table indents the id too
+        i_p = next(i for i, l in enumerate(htree) if l.startswith("parent1"))
+        self.assertTrue(htree[i_p + 1].startswith("  child1"), htree)
+        self.assertIn("do the child thing", htree[i_p + 1])
+        plain = json.loads(self.ok("list", "--all", "--json"))
         self.assertTrue({"parent1", "child1"} <= {a["id"] for a in plain})
-        self.assertEqual({a["id"] for a in json.loads(self.ok("list", "--ws", self.ws))} >= {"parent1", "child1"}, True)
+        self.assertEqual({a["id"] for a in json.loads(self.ok("list", "--ws", self.ws, "--json"))} >= {"parent1", "child1"}, True)
         self.assertIn("parent1", self.ok("who", "--ws", self.ws))
         self.fail("spawn", "x", "--paths")                          # --paths without a value
 

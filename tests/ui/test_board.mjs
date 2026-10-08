@@ -271,3 +271,14 @@ describe('board hard rules', () => {
     assert.ok(el.querySelector('.lane-q').querySelector('h3').textContent.includes('Questions'));
   });
 });
+
+describe('board title', () => {
+  test('shows the workspace name, keeps the id in a title attribute', () => {
+    const { el, store } = setup([P()]);
+    store.set({ workspaces: [{ id: 'w1', name: 'Alpha Service' }] });
+    store.flush();
+    const t = el.querySelector('.bd-title');
+    assert.equal(t.textContent, 'Board · Alpha Service');
+    assert.equal(t.getAttribute('title'), 'w1');
+  });
+});

@@ -4,7 +4,7 @@
    2. @media (prefers-color-scheme: dark) unless [data-theme="light"]
    3. [data-theme="dark"] / [data-theme="light"] explicit override
    Density: [data-density="compact"] on any ancestor.
-   Contrast ratios (WCAG 2.x) are listed in visual-direction.md; text >= 4.5:1, marks >= 3:1. */
+   Contrast ratios (WCAG 2.x) are verified by the maintainers (the design contract is kept locally); text >= 4.5:1, marks >= 3:1. */
 
 :root {
   /* ---------- type ---------- */

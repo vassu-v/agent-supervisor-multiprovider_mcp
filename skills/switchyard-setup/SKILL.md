@@ -62,7 +62,7 @@ Use the cheapest model per provider for tests (OpenCode lists free models, ids e
 - `guard.block_patterns` / `escalate_patterns`: regexes tested against every tool call. Block stops the agent; escalate
   interrupts it and waits for `resolve`.
 - `escalation.pending_timeout_s` and `timeout_action`: what happens to unanswered escalations.
-- `mirror_files`: harness notes files whose new lines are copied into `AGENTS.md`.
+- `mirror_files`: harness notes files whose new lines are copied into the shared notes (`.switchyard/AGENTS.md`).
 Full reference: `docs/policy.md`, `docs/providers.md`, `docs/security.md`.
 The guard is detect-and-react, not a sandbox. For hard limits use the provider's own sandbox.
 

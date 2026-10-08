@@ -1,5 +1,5 @@
 /* Switchyard structure. Colour, type, space and motion come from theme.css (tokens); this file only uses var(--*).
-   Component rules are ported from docs/design/mockup-yard.html; class names match it so views can use them as-is. */
+   Component rules come from the Yard design mockup; the class names are kept so views can use them as-is. */
 @import url("theme.css");
 
 /* ================= base ================= */
@@ -83,6 +83,7 @@ body[data-net="down"] main, body[data-net="down"] #esc-bar { opacity: .6; }
 .views a:hover { color: var(--c-text); }
 .views a[aria-current="page"] { color: var(--c-text); border-bottom-color: var(--c-amber); }
 .views .n, .tab .n { font: var(--fs-11) var(--font-mono); color: var(--c-text-faint); margin-left: 4px; }
+.views .n:empty { display: none; }
 .views .n:not(:empty) { color: var(--c-danger); font-weight: var(--fw-semibold); }
 
 /* workspace tabs inside the fleet */
@@ -140,7 +141,7 @@ body.connecting .views, body.connecting #esc-bar, body.connecting .provs, body.c
 @keyframes lamp { 50% { opacity: .25; } }
 
 /* ================= yard ================= */
-.yard { background: var(--c-surface); border: var(--line-hair) solid var(--c-line); border-radius: var(--radius-3); margin-bottom: var(--sp-6); overflow: hidden; }
+.yard { container: yard / inline-size; background: var(--c-surface); border: var(--line-hair) solid var(--c-line); border-radius: var(--radius-3); margin-bottom: var(--sp-6); overflow: hidden; }
 .yard-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--sp-4); padding: var(--sp-4) var(--sp-5); border-bottom: var(--line-hair) solid var(--c-line); background: linear-gradient(var(--c-surface-2), var(--c-surface)); }
 .yard-h h2 { margin: 0; font-size: var(--fs-15); font-weight: var(--fw-bold); display: flex; align-items: center; gap: 8px; }
 .yard-h h2 svg { width: 16px; height: 16px; color: var(--c-text-muted); }
@@ -285,7 +286,8 @@ body.connecting .views, body.connecting #esc-bar, body.connecting .provs, body.c
 [data-density="compact"] .post .tx { font-size: var(--fs-12); }
 
 /* ================= responsive ================= */
-@media (max-width: 1100px) {
+/* container query: the yard narrows with the drawer open, not only with the viewport */
+@container yard (max-width: 1000px) {
   .yard-b { grid-template-columns: 1fr; }
   .board { border-left: 0; border-top: var(--line-hair) solid var(--c-line); display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
   .board .compose, .board .act { grid-column: 1 / -1; }
@@ -309,6 +311,8 @@ body.connecting .views, body.connecting #esc-bar, body.connecting .provs, body.c
 @media (max-width: 560px) {
   body { padding-top: var(--sp-4); }
   .colh { display: none; }
+  .views { flex-wrap: wrap; }
+  .views a { padding: 6px 10px; }
   .row { grid-template-columns: var(--rail-w, 56px) minmax(0, 1fr) auto; padding-right: var(--sp-4); align-items: start; }
   .who { padding: 7px 0 6px; }
   .pm { padding-top: 8px; align-items: flex-end; text-align: right; }

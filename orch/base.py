@@ -31,6 +31,8 @@ these keys always win). Never log or echo its values.
 Adapters run with permission prompts OFF and must be scoped to `cwd` (spawn processes with cwd=cwd).
 Kill must kill child processes too (on Windows use `taskkill /PID <pid> /T /F`).
 """
+import os
+import signal
 import subprocess
 import sys
 
@@ -70,4 +72,13 @@ def kill_tree(proc):
         subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"],
                        capture_output=True)
     else:
-        proc.kill()
+        try:
+            if os.getpgid(proc.pid) == proc.pid:         # it leads its own session/group (start_new_session): take the whole group
+                os.killpg(proc.pid, signal.SIGKILL)
+                return
+        except (OSError, ProcessLookupError):
+            pass
+        try:
+            proc.kill()
+        except OSError:
+            pass

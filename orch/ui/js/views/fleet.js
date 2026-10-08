@@ -42,7 +42,7 @@ export function mount(el, store, api) {
   if (current) current.cleanup(); // defensive: never leave two refresh timers alive
   const openYards = new Set();
   const openDead = new Set();
-  const hooks = { selected: null, compact: false, open: null, toggleDead: null, toggleYard: null, hl: null };
+  const hooks = { selected: null, compact: false, open: null, toggleDead: null, toggleYard: null, hl: null, board: null };
 
   const root = h('section', { class: 'fleet', 'aria-label': 'Fleet' });
   const tabs = h('nav', { class: 'tabs', role: 'tablist', 'aria-label': 'Workspaces' });
@@ -60,6 +60,7 @@ export function mount(el, store, api) {
   const rov = roving(root, { role: 'row', onActivate: (row) => hooks.open(row.getAttribute('data-id')) });
 
   hooks.open = (id) => { if (safeId(id)) router.patch({ agent: id }); };
+  hooks.board = (ws) => { if (safeId(ws)) router.go('board', { ws }); };
   hooks.toggleDead = (id) => { if (openDead.has(id)) openDead.delete(id); else openDead.add(id); render(); };
   hooks.toggleYard = (id) => { if (openYards.has(id)) openYards.delete(id); else openYards.add(id); render(); };
   hooks.hl = (id) => {
@@ -112,14 +113,16 @@ export function mount(el, store, api) {
       (sec, y) => updateYard(sec, y, now, hooks));
     if (!snap.yards.length) {
       emptyEl.removeAttribute('hidden');
-      if (!emptyEl._shown) {
-        emptyEl._shown = true;
+      const filtered = !!((params.ws && params.ws !== 'all') || params.st || params.prov || params.owner || params.q);
+      if (emptyEl._shown !== (filtered ? 'f' : 'n')) {
+        emptyEl._shown = filtered ? 'f' : 'n';
         const clear = on(h('button', { type: 'button' }, 'Clear filters'), 'click',
           () => router.patch({ ws: null, st: null, prov: null, owner: null, q: null }));
-        emptyEl.replaceChildren(h('p', { class: 'empty' }, 'No agents match these filters. ', clear));
+        emptyEl.replaceChildren(filtered ? h('p', { class: 'empty' }, 'No agents match these filters. ', clear)
+          : h('p', { class: 'empty' }, 'No agents yet. Start one: ', h('code', { class: 'mono' }, 'python agentctl.py spawn "<task>" --cwd <dir>')));
       }
     } else {
-      emptyEl._shown = false;
+      emptyEl._shown = null;
       emptyEl.setAttribute('hidden', '');
       emptyEl.replaceChildren();
     }

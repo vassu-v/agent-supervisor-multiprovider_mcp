@@ -131,6 +131,17 @@ test("changes: backoff on error grows 1s..15s (scaled) and recovers", async () =
   assert.equal(got[0].audit, true);
 });
 
+test("changes: onState reports the first failure, then recovery with a forced reset", async () => {
+  const { api } = feed([R(4), R(4), { error: "x", status: 0 }, { error: "x", status: 0 }, R(4), R(4)]);
+  const states = [], got = [];
+  const c = createChanges({ api, document: null, ...fast });
+  c.start((d) => got.push(d), (up, r) => states.push(up));
+  await sleep(250); c.stop();
+  assert.deepEqual(states, [false, true]);
+  assert.equal(got.length, 2, "initial reset + reset after recovery");
+  assert.equal(got[1].reset, true);
+});
+
 test("changes: 401 stops the loop", async () => {
   let n = 0;
   const api = { get: async () => { n++; return { error: "no", status: 401 }; } };

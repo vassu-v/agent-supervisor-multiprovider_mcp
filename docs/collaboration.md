@@ -75,7 +75,7 @@ Each spawned agent starts with:
 
 Goals and paths are declarations. Nothing locks files. Two agents can still edit one file.
 Keep parallel agents on disjoint files. Limits: goal 200 characters, 5 live children per agent, depth 3.
-Claims, leases and edit history are not built yet. See [ROADMAP.md](ROADMAP.md).
+Claims, leases and edit history are not built yet.
 
 ## Worked example
 

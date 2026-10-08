@@ -6,14 +6,16 @@ import { patch } from '../core/router.js';
 import { STREAM_MAX, mergeStream, drawerAgentId, findAgent, capsOf, createLine, createTurn } from '../components/drawer-logic.js';
 import { buildActions } from '../components/drawer-actions.js';
 
-const POLL_MS = 1000, PAGE_N = 200;
+const POLL_MS = 1000, PAGE_N = 200, STATUS_BUSY_MS = 5000;
 const GLYPH = { agy: 'g-agy', claude: 'g-claude', opencode: 'g-opencode', codex: 'g-codex' };
 const EFF_N = { low: 1, medium: 2, high: 3 };
 const ST_G = { busy: 's-busy', starting: 's-busy', idle: 's-idle', dead: 's-dead', error: 's-err' };
 const ST_C = { busy: 'busy', starting: 'busy', idle: 'idle', dead: 'dead', error: 'err' };
 
 export function mount(el, store, api) {
-  let curId = null, events = [], seq = 0, turnsKey = null, dead = false;
+  let curId = null, events = [], seq = 0, turnsKey = null, dead = false, statusAt = 0, statusSeq = 0, statusBusy = null, statusStale = false;
+  // turn count alone misses a turn finishing (response/ok/secs change, count does not): status and queue depth join the key
+  const turnKey = (a) => a.turns + ':' + a.status + ':' + (a.queued || 0);
   const close = on(h('button', { type: 'button', class: 'drawer-close' }, 'Close'), 'click', () => patch({ agent: null }));
   const aid = h('h2', { class: 'aid mono' });
   const stU = h('use', { href: '#s-idle' }), stW = h('span', { class: 'st-word' });
@@ -69,10 +71,17 @@ export function mount(el, store, api) {
   async function fetchStatus() {
     if (!curId || dead) return;
     const id = curId;
-    const r = await api.get('/api/status?id=' + encodeURIComponent(id));
-    if (dead || id !== curId || !r || r.error || !Array.isArray(r.turns_full)) return;
-    drawTurns(r.turns_full);
-    if (r.last_text !== undefined) text(last, r.last_text);
+    if (statusBusy === id) { statusStale = true; return; } // one poll at a time per agent; re-run once it lands
+    statusBusy = id; statusStale = false;
+    statusAt = Date.now();
+    const mine = ++statusSeq;
+    let r;
+    try { r = await api.get('/api/status?id=' + encodeURIComponent(id)); } finally { if (statusBusy === id) statusBusy = null; }
+    if (!dead && id === curId && mine === statusSeq && r && !r.error && Array.isArray(r.turns_full)) { // a newer request supersedes this one
+      drawTurns(r.turns_full);
+      if (r.last_text !== undefined) text(last, r.last_text);
+    }
+    if (statusStale && !dead && id === curId) fetchStatus();
   }
   async function fetchEvents() {
     if (!curId || dead || (typeof document !== 'undefined' && document.hidden)) return;
@@ -88,7 +97,7 @@ export function mount(el, store, api) {
     if (dead) return;
     const id = drawerAgentId(store), a = id ? findAgent(store, id) : null;
     if (id !== curId) {
-      curId = id; events = []; seq = 0; turnsKey = a ? a.turns : null;
+      curId = id; events = []; seq = 0; turnsKey = a ? turnKey(a) : null;
       head(a); drawGoal(a); text(last, (a && a.last_text) || '');
       list(stream, [], (e) => e.seq, createLine);
       list(turns, [], (t, i) => 'i' + i, () => h('div'));
@@ -99,11 +108,16 @@ export function mount(el, store, api) {
     head(a); drawGoal(a);
     if (a) {
       if (a.last_text !== undefined) text(last, a.last_text);
-      if (a.turns !== turnsKey) { turnsKey = a.turns; fetchStatus(); }
+      const k = turnKey(a);
+      if (k !== turnsKey) { turnsKey = k; fetchStatus(); }
     }
   }
   sync();
   const unsub = store.subscribe((s) => s, sync);
-  const timer = setInterval(fetchEvents, POLL_MS);
+  const timer = setInterval(() => {
+    fetchEvents();
+    const a = curId ? findAgent(store, curId) : null;
+    if (a && (a.status === 'busy' || a.status === 'starting') && Date.now() - statusAt > STATUS_BUSY_MS) fetchStatus(); // live partial text of the open turn
+  }, POLL_MS);
   return () => { dead = true; unsub(); clearInterval(timer); };
 }

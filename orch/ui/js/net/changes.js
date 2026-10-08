@@ -1,4 +1,4 @@
-// Long-poll change feed. start(onDirty) calls onDirty({reset, agents:[], boards:[], escalations, audit, providers, workspaces})
+// Long-poll change feed. start(onDirty, onState?) (onState(up:boolean, reply) on the first failure / first success after) calls onDirty({reset, agents:[], boards:[], escalations, audit, providers, workspaces})
 // whenever something changed. One pending request when idle; backs off 1s..15s on errors; pauses while the tab is hidden;
 // coalesces so the "list" group fires at most every 500 ms and boards at most every 1 s.
 import * as defaultApi from "./api.js";
@@ -19,7 +19,7 @@ export function createChanges(env = {}) {
   const bo = env.backoff || { min: 1000, max: 15000 };
   const wait = env.wait != null ? env.wait : 25;
 
-  let gen = 0, running = false, rev = null, cb = null, ctl = null, visWake = null, stopSleep = null;
+  let gen = 0, running = false, rev = null, cb = null, stCb = null, failed = false, ctl = null, visWake = null, stopSleep = null;
   let pendList = empty(), pendBoard = [], lastList = 0, lastBoard = 0, tList = null, tBoard = null;
 
   const hidden = () => !!(doc && doc.hidden);
@@ -72,11 +72,13 @@ export function createChanges(env = {}) {
       if (r && r.error) {
         if (r.aborted) continue;
         if (r.status === 401) { running = false; return; }          // api.js already told the auth listeners
+        if (!failed) { failed = true; state(false, r); }
         await sleep(delay);
         delay = Math.min(bo.max, delay * 2);
         continue;
       }
       delay = bo.min;
+      if (failed) { failed = false; if (r) r.reset = true; state(true, r); }   // back after an outage: reload everything
       if (!r || typeof r.rev !== "number") continue;
       if (rev === null && !r.reset) r.reset = true;
       rev = r.rev;
@@ -84,14 +86,15 @@ export function createChanges(env = {}) {
     }
   }
 
-  function start(onDirty) {
+  function state(up, r) { if (stCb) { try { stCb(up, r); } catch (e) { /* ignore */ } } }
+  function start(onDirty, onState) {
     if (running) stop();
-    running = true; cb = onDirty; rev = null; gen += 1;
+    running = true; cb = onDirty; stCb = onState || null; failed = false; rev = null; gen += 1;
     if (doc && doc.addEventListener) doc.addEventListener("visibilitychange", onVis);
     loop(gen);
   }
   function stop() {
-    running = false; gen += 1; cb = null;
+    running = false; gen += 1; cb = null; stCb = null;
     if (ctl) { try { ctl.abort(); } catch (e) { /* ignore */ } }
     if (tList !== null) { ct(tList); tList = null; }
     if (tBoard !== null) { ct(tBoard); tBoard = null; }

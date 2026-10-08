@@ -1,4 +1,4 @@
-"""SQLite store for the board (SPEC-0.3 section 4). Python 3.10 stdlib only.
+"""SQLite store for the board (0.3 design). Python 3.10 stdlib only.
 
 One connection, guarded by a re-entrant lock, autocommit mode (isolation_level=None) with explicit
 BEGIN IMMEDIATE for writes. `transaction()` lets a caller group check-then-insert steps atomically

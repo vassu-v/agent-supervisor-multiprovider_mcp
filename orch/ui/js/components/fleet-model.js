@@ -18,19 +18,18 @@ export const EFFORT_WORD = { low: 'low', medium: 'med', high: 'high' };
 const isLive = (a) => a.status !== 'dead';
 const isBusy = (a) => a.status === 'busy' || a.status === 'starting';
 
-/** Pips (0-3) for an effort_applied value. Never reads model ids. */
+// 0-3 pips from effort_applied; never reads model ids
 export function effortPips(applied) {
   return EFFORT_PIPS[applied] || 0;
 }
 
-/** Short effort word for the chip; models without effort show free. */
+// chip word; 'free' without effort
 export function effortWord(applied) {
   if (!applied) return 'free';
   return EFFORT_WORD[applied] || String(applied);
 }
 
-/** Per-turn tokens, newest last (<=MAX_BARS). turn_usage, else turns_full
- * usage, else null (row shows the total only). */
+// per-turn tokens, newest last; null = unknown
 export function sparkValues(agent) {
   if (Array.isArray(agent.turn_usage)) return agent.turn_usage.slice(-MAX_BARS);
   if (Array.isArray(agent.turns_full)) {
@@ -44,7 +43,7 @@ export function sparkValues(agent) {
   return null;
 }
 
-/** Badges for one agent: quiet / stuck? / restarted N / needs review. */
+// quiet, stuck?, restarted, needs review
 export function badgesFor(agent, now) {
   const out = [];
   const q = stuck(agent, now);
@@ -55,7 +54,7 @@ export function badgesFor(agent, now) {
   return out;
 }
 
-/** Platform + status pill. heldTool names the escalation tool when held. */
+// platform + status pill
 export function statusFor(agent, held, heldTool, now) {
   if (agent.status === 'dead') {
     return {
@@ -80,7 +79,7 @@ export function statusFor(agent, held, heldTool, now) {
   return { platform: 'idle', pill: 'st idle', glyph: 's-idle', word: 'idle' };
 }
 
-/** Agent ids with an open question. */
+// agent ids with an open question
 export function openQuestions(posts) {
   const out = new Set();
   for (const p of posts || []) {
@@ -92,15 +91,10 @@ export function openQuestions(posts) {
   return out;
 }
 
-function lastAnnouncements(posts, ws) {
-  return (posts || [])
-    .filter((p) => p.ws === ws && ANN_KINDS.includes(p.kind))
-    .sort((a, b) => a.id - b.id)
-    .slice(-5)
-    .reverse();
-}
+const newest = (posts, ws, ok, n = 5) =>
+  (posts || []).filter((p) => p.ws === ws && ok(p)).sort((a, b) => a.id - b.id).slice(-n).reverse();
 
-/** Whole fleet snapshot for one render. Sets track user-opened yards/dead. */
+/** Whole fleet snapshot for one render. */
 export function buildFleet(s) {
   const agents = s.agents || [];
   const params = s.params || {};
@@ -167,7 +161,8 @@ export function buildFleet(s) {
       canFold,
       deadCount: dead.length,
       maxDepth: shown.reduce((m, n) => Math.max(m, n.depth || 0), 0),
-      board: lastAnnouncements(posts, g.id),
+      board: newest(posts, g.id, (p) => ANN_KINDS.includes(p.kind)),
+      qPosts: newest(posts, g.id, (p) => p.kind === 'question' && p.status === 'open'),
       rows: shown.map((n) => {
         const a = n.agent;
         const held = escSet.has(a.id) || !!a.pending_escalation;

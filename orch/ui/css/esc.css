@@ -72,3 +72,4 @@
     animation: none;
   }
 }
+body[data-view="escalations"] #esc-bar { display: none; }  /* the view lists the same pending items */
